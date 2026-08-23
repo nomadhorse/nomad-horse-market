@@ -12,6 +12,7 @@ let currentLeadPhone='';
 let currentLeadDealId=null;
 let leadFilter='all';
 let followUpFilter='all';
+let priorityFilter='all';
 
 function money(v){ const n=Number(v||0); return n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Sob consulta'; }
 function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -332,6 +333,74 @@ function renderFollowUps(leads){
   const clear=$('#followClear');
   if(clear) clear.classList.toggle('hidden',followUpFilter==='all');
 }
+function setPriorityFilter(value='all'){
+  priorityFilter=value||'all';
+  loadAdmin();
+}
+function priorityState(lead,deal){
+  if(['fechado','perdido'].includes(lead.status)) return null;
+  const f=followUpState(lead);
+  if(f==='overdue') return 'overdue';
+  if(f==='today') return 'today';
+  if(lead.status==='novo') return 'new';
+  if(lead.status==='proposta_enviada' || deal?.stage==='proposta') return 'proposal';
+  return null;
+}
+function priorityLabel(kind){
+  return ({overdue:'Retorno atrasado',today:'Retorno hoje',new:'Novo sem contato',proposal:'Proposta em andamento'})[kind]||kind;
+}
+function priorityIcon(kind){
+  return ({overdue:'⚠️',today:'📅',new:'🆕',proposal:'💼'})[kind]||'•';
+}
+function renderPriorityCenter(leads,deals,listingMap,dealByLead){
+  const open=leads.filter(x=>!['fechado','perdido'].includes(x.status));
+  const entries=open.map(lead=>{
+    const deal=dealByLead.get(lead.id)||null;
+    const kind=priorityState(lead,deal);
+    return kind?{lead,deal,kind,listing:listingMap.get(lead.listing_id)||null}:null;
+  }).filter(Boolean);
+  const order={overdue:0,today:1,new:2,proposal:3};
+  entries.sort((a,b)=>{
+    const d=(order[a.kind]??9)-(order[b.kind]??9);
+    if(d) return d;
+    const ad=a.lead.next_follow_up_at?new Date(a.lead.next_follow_up_at).getTime():new Date(a.lead.created_at).getTime();
+    const bd=b.lead.next_follow_up_at?new Date(b.lead.next_follow_up_at).getTime():new Date(b.lead.created_at).getTime();
+    return ad-bd;
+  });
+  const counts={overdue:0,today:0,new:0,proposal:0};
+  entries.forEach(x=>counts[x.kind]++);
+  const summary=$('#prioritySummary');
+  if(summary) summary.innerHTML=`
+    <button class="priority-stat priority-overdue ${priorityFilter==='overdue'?'active':''}" onclick="setPriorityFilter('overdue')"><span>⚠️ Atrasados</span><strong>${counts.overdue}</strong></button>
+    <button class="priority-stat priority-today ${priorityFilter==='today'?'active':''}" onclick="setPriorityFilter('today')"><span>📅 Hoje</span><strong>${counts.today}</strong></button>
+    <button class="priority-stat priority-new ${priorityFilter==='new'?'active':''}" onclick="setPriorityFilter('new')"><span>🆕 Novos</span><strong>${counts.new}</strong></button>
+    <button class="priority-stat priority-proposal ${priorityFilter==='proposal'?'active':''}" onclick="setPriorityFilter('proposal')"><span>💼 Propostas</span><strong>${counts.proposal}</strong></button>`;
+  const filtered=priorityFilter==='all'?entries:entries.filter(x=>x.kind===priorityFilter);
+  const list=$('#priorityList');
+  if(list) list.innerHTML=filtered.length?filtered.map(({lead,deal,kind,listing})=>{
+    const detail=kind==='overdue'||kind==='today'
+      ? followUpLabel(lead)
+      : kind==='proposal'
+        ? `${deal?.offered_price?'Oferta '+money(deal.offered_price):deal?.asking_price?'Pedido '+money(deal.asking_price):'Proposta em acompanhamento'}`
+        : `Entrou em ${formatDateTime(lead.created_at)}`;
+    const interest=listing?.title||lead.vehicle_type||lead.interest||'Interesse não informado';
+    return `<article class="priority-item priority-item-${kind}">
+      <div class="priority-item-main">
+        <div class="priority-reason"><span>${priorityIcon(kind)}</span><strong>${priorityLabel(kind)}</strong></div>
+        <h4>${esc(lead.name)}</h4>
+        <div class="priority-detail">${esc(detail)}</div>
+        <div class="priority-interest">${esc(interest)}</div>
+      </div>
+      <div class="priority-actions">
+        <button class="btn small" onclick="openLeadEditor('${lead.id}')">Abrir cliente</button>
+        <button class="btn whatsapp small" onclick="openWhatsApp('${esc(lead.phone)}','${encodeURIComponent(lead.name)}')">WhatsApp</button>
+      </div>
+    </article>`;
+  }).join(''):`<div class="priority-empty">✅ ${priorityFilter==='all'?'Nenhuma prioridade pendente agora.':'Nenhum cliente nesta prioridade.'}</div>`;
+  const clear=$('#priorityClear');
+  if(clear) clear.classList.toggle('hidden',priorityFilter==='all');
+}
+
 function scheduleFollowUpPreset(kind){
   const form=$('#leadAdminForm'); if(!form) return;
   const d=new Date();
@@ -545,6 +614,7 @@ async function loadAdmin(){
   const leadMap=new Map(leads.map(x=>[x.id,x]));
   const dealByLead=new Map();
   deals.forEach(d=>{ if(d.buyer_lead_id)dealByLead.set(d.buyer_lead_id,d); if(d.seller_lead_id)dealByLead.set(d.seller_lead_id,d); });
+  renderPriorityCenter(leads,deals,listingMap,dealByLead);
   renderSalesFunnel(leads,deals);
   renderFollowUps(leads);
   let visibleLeads=leadFilter==='all'?leads:leads.filter(x=>x.status===leadFilter);

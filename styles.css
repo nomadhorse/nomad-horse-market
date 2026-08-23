@@ -37,3 +37,13 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoratio
 .follow-overdue{color:#ffd0d0;border-color:#6e2d2d;background:#211010}.follow-today{color:#f2ddb3;border-color:#5a4729;background:#17130e}.follow-week,.follow-later{color:#cce6ff;border-color:#355d7c;background:#10202d}
 .follow-actions{display:flex;gap:7px;flex-wrap:wrap}
 @media(max-width:760px){.follow-summary{grid-template-columns:1fr 1fr}.follow-actions .btn{flex:1 1 calc(50% - 7px)}}
+
+
+/* V11 — Central de Prioridades */
+.priority-heading{margin-top:20px}.priority-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px}
+.priority-stat{border:1px solid #303030;background:linear-gradient(145deg,#151515,#0c0c0c);color:#fff;border-radius:14px;padding:12px;text-align:left;min-height:82px}
+.priority-stat span{display:block;font-size:11px;color:#bbb;font-weight:800}.priority-stat strong{display:block;color:var(--gold);font-size:26px;margin-top:7px}
+.priority-stat:hover,.priority-stat.active{border-color:var(--gold);box-shadow:0 0 0 1px rgba(200,164,93,.18) inset}.priority-overdue{border-color:#5a2a2a}.priority-today{border-color:#5a4729}.priority-new{border-color:#31485a}.priority-proposal{border-color:#51457d}
+.priority-list{display:grid;gap:9px;margin-bottom:21px}.priority-item{display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(145deg,#141414,#0d0d0d);border:1px solid #2e2e2e;border-radius:15px;padding:13px 14px}
+.priority-item-overdue{border-color:#5a2a2a}.priority-item-today{border-color:#5a4729}.priority-item-new{border-color:#31485a}.priority-item-proposal{border-color:#51457d}.priority-item-main{min-width:0}.priority-reason{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.35px}.priority-item h4{font-size:17px;margin:6px 0 4px}.priority-detail{font-size:12px;color:#ddd}.priority-interest{font-size:11px;color:#8f8f8f;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}.priority-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.priority-empty{border:1px solid #29442f;background:#0d1710;color:#b9e7c3;border-radius:13px;padding:14px;font-size:13px}
+@media(max-width:760px){.priority-summary{grid-template-columns:1fr 1fr}.priority-item{display:block}.priority-actions{justify-content:stretch;margin-top:11px}.priority-actions .btn{flex:1}.priority-interest{max-width:100%}}

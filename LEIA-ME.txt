@@ -1,13 +1,13 @@
-Nomad Horse Market V10 — Agenda de Retornos
+Nomad Horse Market V11 — Central de Prioridades
 
 Novidades:
-- Agenda comercial com Atrasados, Hoje, Próximos 7 dias e Sem retorno.
-- Campo "Próximo retorno" em cada cliente.
-- Atalhos para agendar hoje, amanhã ou em 3 dias.
-- Botão "Registrar contato agora".
-- Último contato e próximo retorno visíveis na ficha do cliente.
-- Filtros rápidos de follow-up no painel.
+- Central de prioridades no topo do painel administrativo.
+- Separa automaticamente: retornos atrasados, retornos de hoje, novos clientes sem contato e propostas em andamento.
+- Ordena primeiro o que exige ação mais urgente.
+- Atalhos diretos para Abrir cliente e WhatsApp.
+- Filtros rápidos por tipo de prioridade.
+- Mantém Funil comercial, Agenda de retornos, gestão de anúncios, clientes e negociações da V10.
 
 Publicação:
 Envie todos os arquivos desta pasta para a raiz do mesmo repositório GitHub Pages e confirme na branch principal.
-Depois acesse: https://nomadhorse.com.br/nomad-horse-market/?v=10
+Depois acesse: https://nomadhorse.com.br/nomad-horse-market/?v=11
