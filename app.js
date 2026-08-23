@@ -337,14 +337,20 @@ function setPriorityFilter(value='all'){
   priorityFilter=value||'all';
   loadAdmin();
 }
-function priorityState(lead,deal){
-  if(['fechado','perdido'].includes(lead.status)) return null;
+function priorityKinds(lead,deal){
+  if(['fechado','perdido'].includes(lead.status)) return [];
+  const kinds=[];
   const f=followUpState(lead);
-  if(f==='overdue') return 'overdue';
-  if(f==='today') return 'today';
-  if(lead.status==='novo') return 'new';
-  if(lead.status==='proposta_enviada' || deal?.stage==='proposta') return 'proposal';
-  return null;
+  if(f==='overdue') kinds.push('overdue');
+  if(f==='today') kinds.push('today');
+  if(lead.status==='novo') kinds.push('new');
+  if(lead.status==='proposta_enviada' || deal?.stage==='proposta') kinds.push('proposal');
+  return kinds;
+}
+function priorityState(lead,deal){
+  const kinds=priorityKinds(lead,deal);
+  const order=['overdue','today','new','proposal'];
+  return order.find(k=>kinds.includes(k))||null;
 }
 function priorityLabel(kind){
   return ({overdue:'Retorno atrasado',today:'Retorno hoje',new:'Novo sem contato',proposal:'Proposta em andamento'})[kind]||kind;
@@ -368,14 +374,22 @@ function renderPriorityCenter(leads,deals,listingMap,dealByLead){
     return ad-bd;
   });
   const counts={overdue:0,today:0,new:0,proposal:0};
-  entries.forEach(x=>counts[x.kind]++);
+  open.forEach(lead=>{
+    const deal=dealByLead.get(lead.id)||null;
+    priorityKinds(lead,deal).forEach(kind=>counts[kind]++);
+  });
   const summary=$('#prioritySummary');
   if(summary) summary.innerHTML=`
     <button class="priority-stat priority-overdue ${priorityFilter==='overdue'?'active':''}" onclick="setPriorityFilter('overdue')"><span>⚠️ Atrasados</span><strong>${counts.overdue}</strong></button>
     <button class="priority-stat priority-today ${priorityFilter==='today'?'active':''}" onclick="setPriorityFilter('today')"><span>📅 Hoje</span><strong>${counts.today}</strong></button>
     <button class="priority-stat priority-new ${priorityFilter==='new'?'active':''}" onclick="setPriorityFilter('new')"><span>🆕 Novos</span><strong>${counts.new}</strong></button>
     <button class="priority-stat priority-proposal ${priorityFilter==='proposal'?'active':''}" onclick="setPriorityFilter('proposal')"><span>💼 Propostas</span><strong>${counts.proposal}</strong></button>`;
-  const filtered=priorityFilter==='all'?entries:entries.filter(x=>x.kind===priorityFilter);
+  const filtered=priorityFilter==='all'?entries:open.map(lead=>{
+    const deal=dealByLead.get(lead.id)||null;
+    const kinds=priorityKinds(lead,deal);
+    if(!kinds.includes(priorityFilter)) return null;
+    return {lead,deal,kind:priorityFilter,listing:listingMap.get(lead.listing_id)||null};
+  }).filter(Boolean);
   const list=$('#priorityList');
   if(list) list.innerHTML=filtered.length?filtered.map(({lead,deal,kind,listing})=>{
     const detail=kind==='overdue'||kind==='today'

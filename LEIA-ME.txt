@@ -11,3 +11,6 @@ Novidades:
 Publicação:
 Envie todos os arquivos desta pasta para a raiz do mesmo repositório GitHub Pages e confirme na branch principal.
 Depois acesse: https://nomadhorse.com.br/nomad-horse-market/?v=11
+
+
+V11.1: corrige a Central de Prioridades para que um cliente possa contar simultaneamente em Hoje/Atrasado e em Propostas.
