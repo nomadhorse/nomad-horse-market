@@ -1,5 +1,1 @@
-Nomad Horse Market V6
-Fotos principais integradas aos anúncios do Trailer e da Kombi Home.
-O aplicativo lê o campo image_url do Supabase.
-
-Motorhome: imagem principal adicionada ao anúncio.
+Nomad Horse Market V7 — painel administrativo com edição de anúncios, preço, foto, pausa, reativação, vendido e exclusão.

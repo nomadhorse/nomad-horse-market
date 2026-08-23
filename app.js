@@ -154,6 +154,81 @@ async function renderAdminGate(){
   content.classList.remove('hidden'); await loadAdmin();
 }
 
+function listingStatusLabel(status){ return ({pending:'Aguardando',active:'Ativo',paused:'Pausado',sold:'Vendido',rejected:'Rejeitado'})[status]||status; }
+function listingStatusClass(status){ return 'listing-status status-'+esc(status||''); }
+function storageObjectPath(url=''){
+  const token='/storage/v1/object/public/listing-images/';
+  const i=String(url).indexOf(token);
+  return i>=0?decodeURIComponent(String(url).slice(i+token.length)):null;
+}
+async function removeStoredListingImage(url){
+  const path=storageObjectPath(url); if(!path)return;
+  await sb.storage.from('listing-images').remove([path]);
+}
+async function setListingStatus(id,status){
+  const tags={active:'Anúncio aprovado',paused:'Pausado',sold:'Vendido',rejected:'Rejeitado'};
+  const {error}=await sb.from('listings').update({status,tag:tags[status]||undefined,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)return alert('Não foi possível atualizar o anúncio.');
+  await loadAdmin();
+  if(currentView==='market') await renderListings();
+}
+async function pauseListing(id){ if(confirm('Pausar este anúncio? Ele deixará de aparecer para os compradores.')) await setListingStatus(id,'paused'); }
+async function activateListing(id){ await setListingStatus(id,'active'); }
+async function markListingSold(id){ if(confirm('Marcar este anúncio como VENDIDO? Ele sairá da área pública.')) await setListingStatus(id,'sold'); }
+async function deleteListing(id){
+  if(!confirm('Excluir este anúncio definitivamente? Esta ação não pode ser desfeita.'))return;
+  const {data}=await sb.from('listings').select('image_url').eq('id',id).maybeSingle();
+  const {error}=await sb.from('listings').delete().eq('id',id);
+  if(error)return alert('Não foi possível excluir o anúncio.');
+  if(data?.image_url) await removeStoredListingImage(data.image_url);
+  await loadAdmin();
+}
+function closeListingEditor(){ $('#listingEditor')?.classList.add('hidden'); document.body.classList.remove('modal-open'); }
+async function openListingEditor(id,focusPhoto=false){
+  const {data,error}=await sb.from('listings').select('*').eq('id',id).single();
+  if(error||!data)return alert('Não foi possível abrir este anúncio.');
+  const form=$('#listingEditForm');
+  form.elements.id.value=data.id;
+  form.elements.title.value=data.title||'';
+  form.elements.type.value=data.vehicle_type||'Motorhome';
+  form.elements.price.value=data.price??'';
+  form.elements.year.value=data.year??'';
+  form.elements.city.value=data.city||'';
+  form.elements.state.value=data.state||'';
+  form.elements.tag.value=data.tag||'';
+  form.elements.description.value=data.description||'';
+  form.elements.current_image.value=data.image_url||'';
+  form.elements.photo.value='';
+  $('#editImagePreview').innerHTML=data.image_url?`<img src="${esc(data.image_url)}" alt="Foto atual">`:'<span class="muted">Sem foto</span>';
+  $('#listingEditor').classList.remove('hidden'); document.body.classList.add('modal-open');
+  if(focusPhoto) setTimeout(()=>form.elements.photo.scrollIntoView({behavior:'smooth',block:'center'}),150);
+}
+async function saveListingEdit(form){
+  const btn=form.querySelector('button[type="submit"]'); const old=btn.textContent; btn.disabled=true; btn.textContent='SALVANDO...';
+  const d=Object.fromEntries(new FormData(form).entries());
+  let imageUrl=d.current_image||null;
+  const file=form.elements.photo.files?.[0];
+  if(file){
+    if(file.size>10*1024*1024){ btn.disabled=false; btn.textContent=old; return alert('A foto deve ter no máximo 10 MB.'); }
+    const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=`${d.id}/${Date.now()}.${ext||'jpg'}`;
+    const {error:upErr}=await sb.storage.from('listing-images').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});
+    if(upErr){ btn.disabled=false; btn.textContent=old; return alert('Não foi possível enviar a foto.'); }
+    const {data:pub}=sb.storage.from('listing-images').getPublicUrl(path);
+    const previous=imageUrl; imageUrl=pub.publicUrl;
+    if(previous) await removeStoredListingImage(previous);
+  }
+  const payload={
+    title:d.title.trim(),vehicle_type:d.type,price:d.price?Number(d.price):null,year:d.year?Number(d.year):null,
+    city:d.city.trim()||null,state:d.state.trim()||null,tag:d.tag.trim()||null,description:d.description.trim()||null,
+    image_url:imageUrl,updated_at:new Date().toISOString()
+  };
+  const {error}=await sb.from('listings').update(payload).eq('id',d.id);
+  btn.disabled=false; btn.textContent=old;
+  if(error)return alert('Não foi possível salvar as alterações.');
+  closeListingEditor(); await loadAdmin(); if(currentView==='market') await renderListings();
+}
+
 async function loadAdmin(){
   const [lr,lisr,dr]=await Promise.all([
     sb.from('leads').select('*').order('created_at',{ascending:false}),
@@ -169,8 +244,27 @@ async function loadAdmin(){
   $('#sDeals').textContent=deals.length;
   $('#pendingListings').innerHTML=listings.filter(x=>x.status==='pending').map(x=>`
     <div class="pending-card"><strong>${esc(x.title)}</strong> — ${esc(x.city||'')} — ${money(x.price)}
-      <div class="btn-row"><button class="btn" onclick="approveListing('${x.id}')">Aprovar</button><button class="btn red" onclick="rejectListing('${x.id}')">Rejeitar</button></div>
+      <div class="btn-row"><button class="btn" onclick="approveListing('${x.id}')">Aprovar</button><button class="btn red" onclick="rejectListing('${x.id}')">Rejeitar</button><button class="btn ghost" onclick="openListingEditor('${x.id}')">Editar antes</button></div>
     </div>`).join('') || '<div class="muted">Nenhum anúncio aguardando aprovação.</div>';
+
+  $('#manageListings').innerHTML=listings.map(x=>`
+    <article class="admin-listing-card">
+      <div class="admin-listing-photo">${x.image_url?`<img src="${esc(x.image_url)}" alt="${esc(x.title)}">`:`<span>${esc((x.vehicle_type||'Anúncio').toUpperCase())}</span>`}</div>
+      <div class="admin-listing-info">
+        <div class="admin-listing-head"><span class="${listingStatusClass(x.status)}">${listingStatusLabel(x.status)}</span><small>${esc(x.vehicle_type)}</small></div>
+        <strong>${esc(x.title)}</strong>
+        <div class="muted">${x.year||''}${x.year&&x.city?' • ':''}${esc(x.city||'')}${x.state?' - '+esc(x.state):''}</div>
+        <div class="admin-price">${money(x.price)}</div>
+        <div class="admin-actions">
+          <button class="btn small" onclick="openListingEditor('${x.id}')">Editar</button>
+          <button class="btn ghost small" onclick="openListingEditor('${x.id}',true)">Trocar foto</button>
+          ${x.status==='active'?`<button class="btn ghost small" onclick="pauseListing('${x.id}')">Pausar</button>`:`<button class="btn ghost small" onclick="activateListing('${x.id}')">Ativar</button>`}
+          ${x.status!=='sold'?`<button class="btn ghost small" onclick="markListingSold('${x.id}')">Vendido</button>`:''}
+          <button class="btn red small" onclick="deleteListing('${x.id}')">Excluir</button>
+        </div>
+      </div>
+    </article>`).join('') || '<div class="muted">Nenhum anúncio cadastrado.</div>';
+
   $('#adminRows').innerHTML=leads.map(x=>`
     <tr><td>${new Date(x.created_at).toLocaleString('pt-BR')}</td><td>${esc(x.lead_type)}</td><td>${esc(x.name)}</td><td>${esc(x.phone)}</td>
     <td>${esc(x.vehicle_type||x.interest||'')}</td><td>${esc(x.city||'')}</td><td><select class="status" onchange="updateLeadStatus('${x.id}',this.value)">
@@ -179,9 +273,8 @@ async function loadAdmin(){
   $('#dealRows').innerHTML=deals.map(x=>`
     <tr><td>${new Date(x.created_at).toLocaleString('pt-BR')}</td><td>${esc(x.stage)}</td><td>${money(x.asking_price)}</td><td>${money(x.offered_price)}</td><td>${money(x.agreed_price)}</td><td>${money(x.commission_amount)}</td></tr>`).join('') || '<tr><td colspan="6">Nenhuma negociação ainda.</td></tr>';
 }
-
-async function approveListing(id){ const {error}=await sb.from('listings').update({status:'active',tag:'Anúncio aprovado'}).eq('id',id); if(error)return alert('Não foi possível aprovar.'); await loadAdmin(); }
-async function rejectListing(id){ if(!confirm('Rejeitar este anúncio?'))return; const {error}=await sb.from('listings').update({status:'rejected',tag:'Rejeitado'}).eq('id',id); if(error)return alert('Não foi possível rejeitar.'); await loadAdmin(); }
+async function approveListing(id){ await setListingStatus(id,'active'); }
+async function rejectListing(id){ if(confirm('Rejeitar este anúncio?')) await setListingStatus(id,'rejected'); }
 async function updateLeadStatus(id,status){ const {error}=await sb.from('leads').update({status}).eq('id',id); if(error)alert('Não foi possível atualizar o status.'); }
 async function exportData(){
   const [l,a,d]=await Promise.all([sb.from('leads').select('*'),sb.from('listings').select('*'),sb.from('deals').select('*')]);
