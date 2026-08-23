@@ -2,10 +2,11 @@
   "name": "Nomad Horse Market",
   "short_name": "NH Market",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0b0b0b",
+  "background_color": "#080808",
   "theme_color": "#111111",
-  "description": "Marketplace gerenciado de motorhomes, trailers, reboques e Kombi Home.",
+  "description": "Marketplace gerenciado da Nomad Horse.",
   "icons": [
     {
       "src": "icon-192.png",
