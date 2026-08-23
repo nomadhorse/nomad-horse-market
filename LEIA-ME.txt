@@ -1,6 +1,3 @@
-Nomad Horse Market V2 - Supabase central, painel com login, RLS e dados online.
-
-
-CORREÇÃO V3:
-- Ao tocar em Tenho interesse, o campo Tipo agora acompanha automaticamente o anúncio (Reboque, Trailer, Motorhome ou Kombi Home).
-- Cache atualizado para facilitar futuras correções.
+NOMAD HORSE MARKET — V4
+Foto principal do Trailer para cavalos integrada aos anúncios.
+O aplicativo agora lê o campo image_url do Supabase.

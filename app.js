@@ -29,7 +29,7 @@ async function showView(name){
 async function renderListings(){
   const wrap=$('#listingGrid'); if(!wrap)return;
   wrap.innerHTML='<div class="loader">Carregando anúncios...</div>';
-  let q=sb.from('listings').select('id,vehicle_type,title,description,price,year,city,state,tag,featured,created_at').eq('status','active').order('featured',{ascending:false}).order('created_at',{ascending:false});
+  let q=sb.from('listings').select('id,vehicle_type,title,description,price,year,city,state,tag,featured,image_url,created_at').eq('status','active').order('featured',{ascending:false}).order('created_at',{ascending:false});
   const type=$('#filterType')?.value||'';
   const city=($('#filterCity')?.value||'').trim();
   const max=Number($('#filterPrice')?.value||0);
@@ -40,7 +40,7 @@ async function renderListings(){
   if(error){ wrap.innerHTML='<div class="notice error">Não foi possível carregar os anúncios agora.</div>'; return; }
   wrap.innerHTML=(data||[]).map(x=>`
     <article class="listing">
-      <div class="listing-photo">${esc((x.vehicle_type||'ANÚNCIO').toUpperCase())}</div>
+      <div class="listing-photo">${x.image_url ? `<img src="${esc(x.image_url)}" alt="${esc(x.title)}" loading="lazy">` : esc((x.vehicle_type||'ANÚNCIO').toUpperCase())}</div>
       <div class="listing-body">
         <span class="badge">${esc(x.tag||x.vehicle_type)}</span>
         <h3>${esc(x.title)}</h3>
