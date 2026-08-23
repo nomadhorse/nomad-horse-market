@@ -47,16 +47,22 @@ async function renderListings(){
         <div class="muted">${x.year||''}${x.year&&x.city?' • ':''}${esc(x.city||'')}${x.state?' - '+esc(x.state):''}</div>
         <div class="price">${money(x.price)}</div>
         <div class="btn-row">
-          <button class="btn" onclick="interest('${x.id}','${encodeURIComponent(x.title)}')">Tenho interesse</button>
+          <button class="btn" onclick="interest('${x.id}','${encodeURIComponent(x.title)}','${encodeURIComponent(x.vehicle_type||'')}')">Tenho interesse</button>
           <button class="btn ghost" onclick="shareListing('${x.id}','${encodeURIComponent(x.title)}',${Number(x.price||0)})">Compartilhar</button>
         </div>
       </div>
     </article>`).join('') || '<div class="notice">Nenhum anúncio encontrado com esses filtros.</div>';
 }
 
-function interest(id,title){
+function interest(id,title,vehicleType){
   currentInterestListingId=id;
   showView('buy');
+  const selectedType=decodeURIComponent(vehicleType||'');
+  const typeField=$('#buyType');
+  if(typeField && selectedType){
+    const exists=[...typeField.options].some(o=>o.value===selectedType);
+    if(exists) typeField.value=selectedType;
+  }
   $('#buyInterest').value=decodeURIComponent(title||'');
   $('#buyMessage').value='Tenho interesse neste anúncio e gostaria de receber mais informações.';
 }
