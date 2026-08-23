@@ -1,3 +1,3 @@
-NOMAD HORSE MARKET — V4
-Foto principal do Trailer para cavalos integrada aos anúncios.
-O aplicativo agora lê o campo image_url do Supabase.
+Nomad Horse Market V5
+Fotos principais integradas aos anúncios do Trailer e da Kombi Home.
+O aplicativo lê o campo image_url do Supabase.
