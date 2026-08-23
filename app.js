@@ -10,6 +10,7 @@ let deferredPrompt=null;
 let currentLeadId=null;
 let currentLeadPhone='';
 let currentLeadDealId=null;
+let leadFilter='all';
 
 function money(v){ const n=Number(v||0); return n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Sob consulta'; }
 function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -242,6 +243,36 @@ function leadStatusLabel(v){
 function dealStageLabel(v){
   return ({lead:'Lead',qualificado:'Qualificado',proposta:'Proposta',vistoria:'Vistoria',documentacao:'Documentação',fechado:'Fechado',cancelado:'Cancelado'})[v]||v||'';
 }
+function setLeadFilter(status='all'){
+  leadFilter=status||'all';
+  loadAdmin();
+}
+function renderSalesFunnel(leads,deals){
+  const stages=[
+    ['novo','Novo'],['contato_feito','Contato feito'],['negociacao','Negociação'],
+    ['proposta_enviada','Proposta'],['fechado','Fechado'],['perdido','Perdido']
+  ];
+  const counts=Object.fromEntries(stages.map(([k])=>[k,leads.filter(x=>x.status===k).length]));
+  const openCount=leads.filter(x=>!['fechado','perdido'].includes(x.status)).length;
+  const closedDeals=deals.filter(x=>x.stage==='fechado');
+  const closedValue=closedDeals.reduce((sum,x)=>sum+Number(x.agreed_price||0),0);
+  const commissions=closedDeals.reduce((sum,x)=>sum+Number(x.commission_amount||0),0);
+  const funnel=$('#salesFunnel');
+  if(funnel) funnel.innerHTML=stages.map(([key,label],i)=>`
+    <button type="button" class="funnel-step funnel-${key} ${leadFilter===key?'active':''}" onclick="setLeadFilter('${key}')">
+      <span class="funnel-index">${i+1}</span>
+      <strong>${counts[key]||0}</strong>
+      <span>${label}</span>
+    </button>`).join('');
+  const summary=$('#funnelSummary');
+  if(summary) summary.innerHTML=`
+    <div><span>Em aberto</span><strong>${openCount}</strong></div>
+    <div><span>Fechados</span><strong>${counts.fechado||0}</strong></div>
+    <div><span>Valor fechado</span><strong>${closedValue?money(closedValue):'R$ 0,00'}</strong></div>
+    <div><span>Comissão gerada</span><strong>${commissions?money(commissions):'R$ 0,00'}</strong></div>`;
+  const clear=$('#funnelClear');
+  if(clear) clear.classList.toggle('hidden',leadFilter==='all');
+}
 function waNumber(phone=''){
   let d=String(phone).replace(/\D/g,'');
   if(d.length===10||d.length===11) d='55'+d;
@@ -427,8 +458,10 @@ async function loadAdmin(){
   const leadMap=new Map(leads.map(x=>[x.id,x]));
   const dealByLead=new Map();
   deals.forEach(d=>{ if(d.buyer_lead_id)dealByLead.set(d.buyer_lead_id,d); if(d.seller_lead_id)dealByLead.set(d.seller_lead_id,d); });
+  renderSalesFunnel(leads,deals);
+  const visibleLeads=leadFilter==='all'?leads:leads.filter(x=>x.status===leadFilter);
 
-  $('#leadCards').innerHTML=leads.map(x=>{
+  $('#leadCards').innerHTML=visibleLeads.map(x=>{
     const listing=listingMap.get(x.listing_id);
     const deal=dealByLead.get(x.id);
     return `<article class="lead-card">
@@ -446,7 +479,7 @@ async function loadAdmin(){
         <button class="btn small" onclick="openLeadEditor('${x.id}')">Abrir cliente</button>
         <button class="btn whatsapp small" onclick="openWhatsApp('${esc(x.phone)}','${encodeURIComponent(x.name)}')">WhatsApp</button>
       </div>
-    </article>`}).join('') || '<div class="panel muted">Nenhum cliente/lead ainda.</div>';
+    </article>`}).join('') || `<div class="panel muted">${leadFilter==='all'?'Nenhum cliente/lead ainda.':'Nenhum cliente nesta etapa do funil.'}</div>`;
 
   $('#dealCards').innerHTML=deals.map(x=>{
     const buyer=leadMap.get(x.buyer_lead_id), seller=leadMap.get(x.seller_lead_id), listing=listingMap.get(x.listing_id);

@@ -1,1 +1,1 @@
-Nomad Horse Market V8 — painel de clientes/leads com WhatsApp, status, observações internas e controle de negociações, valores e comissão.
+Nomad Horse Market V9 — funil comercial visual no painel, filtros por etapa e resumo de valor fechado/comissão, mantendo gestão de anúncios, clientes e negociações.
