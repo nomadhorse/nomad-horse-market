@@ -7,6 +7,9 @@ const $$ = (q, el=document) => [...el.querySelectorAll(q)];
 let currentView='home';
 let currentInterestListingId=null;
 let deferredPrompt=null;
+let currentLeadId=null;
+let currentLeadPhone='';
+let currentLeadDealId=null;
 
 function money(v){ const n=Number(v||0); return n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Sob consulta'; }
 function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -229,6 +232,161 @@ async function saveListingEdit(form){
   closeListingEditor(); await loadAdmin(); if(currentView==='market') await renderListings();
 }
 
+
+function leadTypeLabel(v){
+  return ({compra:'Compra',venda:'Venda',fabricacao:'Fabricação',servico:'Serviço',interesse_anuncio:'Interesse em anúncio'})[v]||v||'Lead';
+}
+function leadStatusLabel(v){
+  return ({novo:'Novo',contato_feito:'Contato feito',negociacao:'Negociação',proposta_enviada:'Proposta enviada',fechado:'Fechado',perdido:'Perdido'})[v]||v||'';
+}
+function dealStageLabel(v){
+  return ({lead:'Lead',qualificado:'Qualificado',proposta:'Proposta',vistoria:'Vistoria',documentacao:'Documentação',fechado:'Fechado',cancelado:'Cancelado'})[v]||v||'';
+}
+function waNumber(phone=''){
+  let d=String(phone).replace(/\D/g,'');
+  if(d.length===10||d.length===11) d='55'+d;
+  return d;
+}
+function openWhatsApp(phone,name=''){
+  const d=waNumber(phone);
+  if(!d) return alert('WhatsApp não informado.');
+  try{name=decodeURIComponent(name||'')}catch(e){} const msg=encodeURIComponent(`Olá ${name||''}, aqui é da Nomad Horse. Recebemos seu contato pelo Nomad Horse Market.`);
+  window.open(`https://wa.me/${d}?text=${msg}`,'_blank','noopener');
+}
+function closeLeadEditor(){
+  $('#leadEditor')?.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  currentLeadId=null; currentLeadPhone=''; currentLeadDealId=null;
+}
+async function openLeadEditor(id){
+  const {data:lead,error}=await sb.from('leads').select('*').eq('id',id).single();
+  if(error||!lead) return alert('Não foi possível abrir este cliente.');
+  currentLeadId=id; currentLeadPhone=lead.phone||'';
+  let listing=null;
+  if(lead.listing_id){
+    const r=await sb.from('listings').select('id,title,price,vehicle_type,city,state').eq('id',lead.listing_id).maybeSingle();
+    listing=r.data||null;
+  }
+  let deal=null;
+  let r=await sb.from('deals').select('*').eq('buyer_lead_id',id).order('created_at',{ascending:false}).limit(1).maybeSingle();
+  deal=r.data||null;
+  if(!deal){
+    r=await sb.from('deals').select('*').eq('seller_lead_id',id).order('created_at',{ascending:false}).limit(1).maybeSingle();
+    deal=r.data||null;
+  }
+  currentLeadDealId=deal?.id||null;
+  $('#leadEditorName').textContent=lead.name||'Cliente';
+  $('#leadEditorType').textContent=leadTypeLabel(lead.lead_type);
+  $('#leadEditorMeta').innerHTML=`
+    <div><span>WhatsApp</span><strong>${esc(lead.phone||'—')}</strong></div>
+    <div><span>E-mail</span><strong>${esc(lead.email||'—')}</strong></div>
+    <div><span>Cidade</span><strong>${esc([lead.city,lead.state].filter(Boolean).join(' - ')||'—')}</strong></div>
+    <div><span>Interesse</span><strong>${esc(lead.vehicle_type||lead.interest||listing?.vehicle_type||'—')}</strong></div>
+    <div><span>Orçamento</span><strong>${lead.budget?money(lead.budget):'—'}</strong></div>
+    <div><span>Prazo</span><strong>${esc(lead.timeline||'—')}</strong></div>`;
+  $('#leadListingInfo').innerHTML=listing
+    ? `<strong>${esc(listing.title)}</strong><span>${money(listing.price)}${listing.city?' • '+esc(listing.city):''}${listing.state?' - '+esc(listing.state):''}</span>`
+    : '<span class="muted">Sem anúncio vinculado.</span>';
+  $('#leadMessageText').textContent=lead.message||'Nenhuma mensagem enviada.';
+  const form=$('#leadAdminForm');
+  form.elements.id.value=lead.id;
+  form.elements.status.value=lead.status||'novo';
+  form.elements.admin_notes.value=lead.admin_notes||'';
+  $('#leadWhatsBtn').onclick=()=>openWhatsApp(lead.phone,lead.name);
+  renderLeadDeal(deal,lead,listing);
+  $('#leadEditor').classList.remove('hidden'); document.body.classList.add('modal-open');
+}
+function renderLeadDeal(deal,lead,listing){
+  const box=$('#leadDealArea');
+  if(!box)return;
+  const canCreate=['compra','interesse_anuncio','venda'].includes(lead.lead_type);
+  if(!deal){
+    box.innerHTML=canCreate?`
+      <div class="deal-empty">
+        <strong>Ainda não há negociação criada.</strong>
+        <p class="muted">Crie uma negociação para acompanhar proposta, preço e comissão.</p>
+        <button class="btn" type="button" onclick="createDealFromLead()">CRIAR NEGOCIAÇÃO</button>
+      </div>`:`<div class="notice">Este tipo de lead é acompanhado pelo status e pelas observações.</div>`;
+    return;
+  }
+  box.innerHTML=`
+    <form id="dealAdminForm" onsubmit="saveDeal(this);return false">
+      <input type="hidden" name="id" value="${esc(deal.id)}">
+      <div class="form-grid">
+        <div><label>Etapa</label><select class="field" name="stage">
+          ${['lead','qualificado','proposta','vistoria','documentacao','fechado','cancelado'].map(v=>`<option value="${v}" ${deal.stage===v?'selected':''}>${dealStageLabel(v)}</option>`).join('')}
+        </select></div>
+        <div><label>Preço pedido</label><input class="field" type="number" step="0.01" min="0" name="asking_price" value="${deal.asking_price??listing?.price??''}"></div>
+        <div><label>Oferta</label><input class="field" type="number" step="0.01" min="0" name="offered_price" value="${deal.offered_price??''}"></div>
+        <div><label>Preço fechado</label><input class="field" type="number" step="0.01" min="0" name="agreed_price" value="${deal.agreed_price??''}"></div>
+        <div><label>Comissão</label><select class="field" name="commission_type">
+          <option value="">Não definida</option>
+          <option value="percent" ${deal.commission_type==='percent'?'selected':''}>Percentual (%)</option>
+          <option value="fixed" ${deal.commission_type==='fixed'?'selected':''}>Valor fixo (R$)</option>
+        </select></div>
+        <div><label>Valor / % da comissão</label><input class="field" type="number" step="0.01" min="0" name="commission_value" value="${deal.commission_value??''}"></div>
+        <div class="full"><label>Observações da negociação</label><textarea class="field" name="notes">${esc(deal.notes||'')}</textarea></div>
+        <div class="full deal-total"><span>Comissão calculada</span><strong>${deal.commission_amount?money(deal.commission_amount):'—'}</strong></div>
+        <div class="full"><button class="btn" type="submit">SALVAR NEGOCIAÇÃO</button></div>
+      </div>
+    </form>`;
+}
+async function saveLeadAdmin(form){
+  const d=Object.fromEntries(new FormData(form).entries());
+  const {error}=await sb.from('leads').update({
+    status:d.status,admin_notes:d.admin_notes.trim()||null,updated_at:new Date().toISOString()
+  }).eq('id',d.id);
+  if(error)return alert('Não foi possível salvar os dados do cliente.');
+  await loadAdmin();
+  alert('Cliente atualizado.');
+}
+async function createDealFromLead(){
+  if(!currentLeadId)return;
+  const {data:lead,error}=await sb.from('leads').select('*').eq('id',currentLeadId).single();
+  if(error||!lead)return alert('Não foi possível carregar o cliente.');
+  let listing=null;
+  if(lead.listing_id){
+    const r=await sb.from('listings').select('id,price').eq('id',lead.listing_id).maybeSingle();
+    listing=r.data||null;
+  }
+  const payload={
+    listing_id:lead.listing_id||null,
+    buyer_lead_id:['compra','interesse_anuncio'].includes(lead.lead_type)?lead.id:null,
+    seller_lead_id:lead.lead_type==='venda'?lead.id:null,
+    stage:'lead',
+    asking_price:listing?.price||null,
+    notes:lead.admin_notes||null,
+    updated_at:new Date().toISOString()
+  };
+  const {error:insErr}=await sb.from('deals').insert(payload);
+  if(insErr)return alert('Não foi possível criar a negociação.');
+  await openLeadEditor(currentLeadId);
+  await loadAdmin();
+}
+async function saveDeal(form){
+  const d=Object.fromEntries(new FormData(form).entries());
+  const asking=d.asking_price?Number(d.asking_price):null;
+  const offered=d.offered_price?Number(d.offered_price):null;
+  const agreed=d.agreed_price?Number(d.agreed_price):null;
+  const ctype=d.commission_type||null;
+  const cvalue=d.commission_value?Number(d.commission_value):null;
+  let amount=null;
+  if(ctype==='fixed'&&cvalue!=null) amount=cvalue;
+  if(ctype==='percent'&&cvalue!=null){
+    const base=agreed??offered??asking;
+    if(base!=null) amount=base*cvalue/100;
+  }
+  const {error}=await sb.from('deals').update({
+    stage:d.stage,asking_price:asking,offered_price:offered,agreed_price:agreed,
+    commission_type:ctype,commission_value:cvalue,commission_amount:amount,
+    notes:d.notes.trim()||null,updated_at:new Date().toISOString()
+  }).eq('id',d.id);
+  if(error)return alert('Não foi possível salvar a negociação.');
+  if(currentLeadId) await openLeadEditor(currentLeadId);
+  await loadAdmin();
+  alert('Negociação atualizada.');
+}
+
 async function loadAdmin(){
   const [lr,lisr,dr]=await Promise.all([
     sb.from('leads').select('*').order('created_at',{ascending:false}),
@@ -265,13 +423,45 @@ async function loadAdmin(){
       </div>
     </article>`).join('') || '<div class="muted">Nenhum anúncio cadastrado.</div>';
 
-  $('#adminRows').innerHTML=leads.map(x=>`
-    <tr><td>${new Date(x.created_at).toLocaleString('pt-BR')}</td><td>${esc(x.lead_type)}</td><td>${esc(x.name)}</td><td>${esc(x.phone)}</td>
-    <td>${esc(x.vehicle_type||x.interest||'')}</td><td>${esc(x.city||'')}</td><td><select class="status" onchange="updateLeadStatus('${x.id}',this.value)">
-    ${['novo','contato_feito','negociacao','proposta_enviada','fechado','perdido'].map(s=>`<option value="${s}" ${x.status===s?'selected':''}>${s.replaceAll('_',' ')}</option>`).join('')}
-    </select></td></tr>`).join('') || '<tr><td colspan="7">Nenhum lead ainda.</td></tr>';
-  $('#dealRows').innerHTML=deals.map(x=>`
-    <tr><td>${new Date(x.created_at).toLocaleString('pt-BR')}</td><td>${esc(x.stage)}</td><td>${money(x.asking_price)}</td><td>${money(x.offered_price)}</td><td>${money(x.agreed_price)}</td><td>${money(x.commission_amount)}</td></tr>`).join('') || '<tr><td colspan="6">Nenhuma negociação ainda.</td></tr>';
+  const listingMap=new Map(listings.map(x=>[x.id,x]));
+  const leadMap=new Map(leads.map(x=>[x.id,x]));
+  const dealByLead=new Map();
+  deals.forEach(d=>{ if(d.buyer_lead_id)dealByLead.set(d.buyer_lead_id,d); if(d.seller_lead_id)dealByLead.set(d.seller_lead_id,d); });
+
+  $('#leadCards').innerHTML=leads.map(x=>{
+    const listing=listingMap.get(x.listing_id);
+    const deal=dealByLead.get(x.id);
+    return `<article class="lead-card">
+      <div class="lead-card-top">
+        <div><span class="lead-kind">${leadTypeLabel(x.lead_type)}</span><h4>${esc(x.name)}</h4></div>
+        <span class="lead-status lead-${esc(x.status)}">${leadStatusLabel(x.status)}</span>
+      </div>
+      <div class="lead-quick">
+        <span>📱 ${esc(x.phone)}</span>
+        <span>📍 ${esc([x.city,x.state].filter(Boolean).join(' - ')||'Não informado')}</span>
+        <span>🎯 ${esc(x.vehicle_type||x.interest||listing?.title||'Sem interesse informado')}</span>
+      </div>
+      ${deal?`<div class="deal-mini">Negociação: <strong>${dealStageLabel(deal.stage)}</strong>${deal.agreed_price?' • '+money(deal.agreed_price):''}</div>`:''}
+      <div class="btn-row">
+        <button class="btn small" onclick="openLeadEditor('${x.id}')">Abrir cliente</button>
+        <button class="btn whatsapp small" onclick="openWhatsApp('${esc(x.phone)}','${encodeURIComponent(x.name)}')">WhatsApp</button>
+      </div>
+    </article>`}).join('') || '<div class="panel muted">Nenhum cliente/lead ainda.</div>';
+
+  $('#dealCards').innerHTML=deals.map(x=>{
+    const buyer=leadMap.get(x.buyer_lead_id), seller=leadMap.get(x.seller_lead_id), listing=listingMap.get(x.listing_id);
+    const lead=buyer||seller;
+    return `<article class="deal-card">
+      <div class="deal-card-head"><span class="badge">${dealStageLabel(x.stage)}</span><strong>${esc(listing?.title||'Negociação')}</strong></div>
+      <div class="deal-card-grid">
+        <div><span>Cliente</span><strong>${esc(lead?.name||'—')}</strong></div>
+        <div><span>Preço pedido</span><strong>${x.asking_price?money(x.asking_price):'—'}</strong></div>
+        <div><span>Oferta</span><strong>${x.offered_price?money(x.offered_price):'—'}</strong></div>
+        <div><span>Fechado</span><strong>${x.agreed_price?money(x.agreed_price):'—'}</strong></div>
+        <div><span>Comissão</span><strong>${x.commission_amount?money(x.commission_amount):'—'}</strong></div>
+      </div>
+      ${lead?`<button class="btn ghost small" onclick="openLeadEditor('${lead.id}')">Abrir negociação</button>`:''}
+    </article>`}).join('') || '<div class="panel muted">Nenhuma negociação ainda.</div>';
 }
 async function approveListing(id){ await setListingStatus(id,'active'); }
 async function rejectListing(id){ if(confirm('Rejeitar este anúncio?')) await setListingStatus(id,'rejected'); }

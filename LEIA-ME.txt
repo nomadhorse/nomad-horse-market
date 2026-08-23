@@ -1,1 +1,1 @@
-Nomad Horse Market V7 — painel administrativo com edição de anúncios, preço, foto, pausa, reativação, vendido e exclusão.
+Nomad Horse Market V8 — painel de clientes/leads com WhatsApp, status, observações internas e controle de negociações, valores e comissão.
