@@ -1,3 +1,5 @@
-Nomad Horse Market V5
+Nomad Horse Market V6
 Fotos principais integradas aos anúncios do Trailer e da Kombi Home.
 O aplicativo lê o campo image_url do Supabase.
+
+Motorhome: imagem principal adicionada ao anúncio.
