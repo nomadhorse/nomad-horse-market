@@ -11,6 +11,7 @@ let currentLeadId=null;
 let currentLeadPhone='';
 let currentLeadDealId=null;
 let leadFilter='all';
+let followUpFilter='all';
 
 function money(v){ const n=Number(v||0); return n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Sob consulta'; }
 function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -245,6 +246,7 @@ function dealStageLabel(v){
 }
 function setLeadFilter(status='all'){
   leadFilter=status||'all';
+  followUpFilter='all';
   loadAdmin();
 }
 function renderSalesFunnel(leads,deals){
@@ -273,6 +275,87 @@ function renderSalesFunnel(leads,deals){
   const clear=$('#funnelClear');
   if(clear) clear.classList.toggle('hidden',leadFilter==='all');
 }
+
+function localDateTimeValue(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  if(Number.isNaN(d.getTime())) return '';
+  const pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function formatDateTime(iso){
+  if(!iso) return '—';
+  const d=new Date(iso);
+  if(Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function followUpState(lead,now=new Date()){
+  if(['fechado','perdido'].includes(lead.status)) return 'closed';
+  if(!lead.next_follow_up_at) return 'none';
+  const d=new Date(lead.next_follow_up_at);
+  if(Number.isNaN(d.getTime())) return 'none';
+  const start=new Date(now); start.setHours(0,0,0,0);
+  const end=new Date(now); end.setHours(23,59,59,999);
+  const week=new Date(end); week.setDate(week.getDate()+7);
+  if(d<start) return 'overdue';
+  if(d<=end) return 'today';
+  if(d<=week) return 'week';
+  return 'later';
+}
+function followUpLabel(lead){
+  const state=followUpState(lead);
+  if(state==='overdue') return `⚠️ Atrasado • ${formatDateTime(lead.next_follow_up_at)}`;
+  if(state==='today') return `📅 Hoje • ${formatDateTime(lead.next_follow_up_at)}`;
+  if(state==='week') return `🗓️ Próximo • ${formatDateTime(lead.next_follow_up_at)}`;
+  if(state==='later') return `🗓️ ${formatDateTime(lead.next_follow_up_at)}`;
+  return '';
+}
+function setFollowUpFilter(value='all'){
+  followUpFilter=value||'all';
+  leadFilter='all';
+  loadAdmin();
+}
+function renderFollowUps(leads){
+  const open=leads.filter(x=>!['fechado','perdido'].includes(x.status));
+  const counts={
+    overdue:open.filter(x=>followUpState(x)==='overdue').length,
+    today:open.filter(x=>followUpState(x)==='today').length,
+    week:open.filter(x=>followUpState(x)==='week').length,
+    none:open.filter(x=>followUpState(x)==='none').length
+  };
+  const el=$('#followUpSummary');
+  if(el) el.innerHTML=`
+    <button class="follow-card overdue ${followUpFilter==='overdue'?'active':''}" onclick="setFollowUpFilter('overdue')"><span>Atrasados</span><strong>${counts.overdue}</strong><small>Contato vencido</small></button>
+    <button class="follow-card today ${followUpFilter==='today'?'active':''}" onclick="setFollowUpFilter('today')"><span>Hoje</span><strong>${counts.today}</strong><small>Retornos de hoje</small></button>
+    <button class="follow-card week ${followUpFilter==='week'?'active':''}" onclick="setFollowUpFilter('week')"><span>Próximos 7 dias</span><strong>${counts.week}</strong><small>Agenda próxima</small></button>
+    <button class="follow-card none ${followUpFilter==='none'?'active':''}" onclick="setFollowUpFilter('none')"><span>Sem retorno</span><strong>${counts.none}</strong><small>Precisa agendar</small></button>`;
+  const clear=$('#followClear');
+  if(clear) clear.classList.toggle('hidden',followUpFilter==='all');
+}
+function scheduleFollowUpPreset(kind){
+  const form=$('#leadAdminForm'); if(!form) return;
+  const d=new Date();
+  if(kind==='today'){ d.setHours(17,0,0,0); if(d<new Date()) d.setDate(d.getDate()+1); }
+  if(kind==='tomorrow'){ d.setDate(d.getDate()+1); d.setHours(9,0,0,0); }
+  if(kind==='3days'){ d.setDate(d.getDate()+3); d.setHours(9,0,0,0); }
+  form.elements.next_follow_up_at.value=localDateTimeValue(d.toISOString());
+}
+async function markContactNow(){
+  if(!currentLeadId) return;
+  const form=$('#leadAdminForm');
+  const status=form?.elements.status?.value==='novo'?'contato_feito':form?.elements.status?.value;
+  const {error}=await sb.from('leads').update({
+    last_contact_at:new Date().toISOString(),
+    status:status||'contato_feito',
+    updated_at:new Date().toISOString()
+  }).eq('id',currentLeadId);
+  if(error) return alert('Não foi possível registrar o contato.');
+  if(form && form.elements.status.value==='novo') form.elements.status.value='contato_feito';
+  await openLeadEditor(currentLeadId);
+  await loadAdmin();
+  alert('Contato registrado agora.');
+}
+
 function waNumber(phone=''){
   let d=String(phone).replace(/\D/g,'');
   if(d.length===10||d.length===11) d='55'+d;
@@ -314,7 +397,9 @@ async function openLeadEditor(id){
     <div><span>Cidade</span><strong>${esc([lead.city,lead.state].filter(Boolean).join(' - ')||'—')}</strong></div>
     <div><span>Interesse</span><strong>${esc(lead.vehicle_type||lead.interest||listing?.vehicle_type||'—')}</strong></div>
     <div><span>Orçamento</span><strong>${lead.budget?money(lead.budget):'—'}</strong></div>
-    <div><span>Prazo</span><strong>${esc(lead.timeline||'—')}</strong></div>`;
+    <div><span>Prazo</span><strong>${esc(lead.timeline||'—')}</strong></div>
+    <div><span>Último contato</span><strong>${esc(formatDateTime(lead.last_contact_at))}</strong></div>
+    <div><span>Próximo retorno</span><strong>${esc(formatDateTime(lead.next_follow_up_at))}</strong></div>`;
   $('#leadListingInfo').innerHTML=listing
     ? `<strong>${esc(listing.title)}</strong><span>${money(listing.price)}${listing.city?' • '+esc(listing.city):''}${listing.state?' - '+esc(listing.state):''}</span>`
     : '<span class="muted">Sem anúncio vinculado.</span>';
@@ -322,6 +407,7 @@ async function openLeadEditor(id){
   const form=$('#leadAdminForm');
   form.elements.id.value=lead.id;
   form.elements.status.value=lead.status||'novo';
+  form.elements.next_follow_up_at.value=localDateTimeValue(lead.next_follow_up_at);
   form.elements.admin_notes.value=lead.admin_notes||'';
   $('#leadWhatsBtn').onclick=()=>openWhatsApp(lead.phone,lead.name);
   renderLeadDeal(deal,lead,listing);
@@ -364,8 +450,9 @@ function renderLeadDeal(deal,lead,listing){
 }
 async function saveLeadAdmin(form){
   const d=Object.fromEntries(new FormData(form).entries());
+  const nextFollow=d.next_follow_up_at?new Date(d.next_follow_up_at).toISOString():null;
   const {error}=await sb.from('leads').update({
-    status:d.status,admin_notes:d.admin_notes.trim()||null,updated_at:new Date().toISOString()
+    status:d.status,admin_notes:d.admin_notes.trim()||null,next_follow_up_at:nextFollow,updated_at:new Date().toISOString()
   }).eq('id',d.id);
   if(error)return alert('Não foi possível salvar os dados do cliente.');
   await loadAdmin();
@@ -459,7 +546,9 @@ async function loadAdmin(){
   const dealByLead=new Map();
   deals.forEach(d=>{ if(d.buyer_lead_id)dealByLead.set(d.buyer_lead_id,d); if(d.seller_lead_id)dealByLead.set(d.seller_lead_id,d); });
   renderSalesFunnel(leads,deals);
-  const visibleLeads=leadFilter==='all'?leads:leads.filter(x=>x.status===leadFilter);
+  renderFollowUps(leads);
+  let visibleLeads=leadFilter==='all'?leads:leads.filter(x=>x.status===leadFilter);
+  if(followUpFilter!=='all') visibleLeads=visibleLeads.filter(x=>followUpState(x)===followUpFilter);
 
   $('#leadCards').innerHTML=visibleLeads.map(x=>{
     const listing=listingMap.get(x.listing_id);
@@ -474,12 +563,13 @@ async function loadAdmin(){
         <span>📍 ${esc([x.city,x.state].filter(Boolean).join(' - ')||'Não informado')}</span>
         <span>🎯 ${esc(x.vehicle_type||x.interest||listing?.title||'Sem interesse informado')}</span>
       </div>
+      ${x.next_follow_up_at && !['fechado','perdido'].includes(x.status)?`<div class="follow-mini follow-${followUpState(x)}">${esc(followUpLabel(x))}</div>`:''}
       ${deal?`<div class="deal-mini">Negociação: <strong>${dealStageLabel(deal.stage)}</strong>${deal.agreed_price?' • '+money(deal.agreed_price):''}</div>`:''}
       <div class="btn-row">
         <button class="btn small" onclick="openLeadEditor('${x.id}')">Abrir cliente</button>
         <button class="btn whatsapp small" onclick="openWhatsApp('${esc(x.phone)}','${encodeURIComponent(x.name)}')">WhatsApp</button>
       </div>
-    </article>`}).join('') || `<div class="panel muted">${leadFilter==='all'?'Nenhum cliente/lead ainda.':'Nenhum cliente nesta etapa do funil.'}</div>`;
+    </article>`}).join('') || `<div class="panel muted">${followUpFilter!=='all'?'Nenhum cliente neste filtro de retorno.':leadFilter==='all'?'Nenhum cliente/lead ainda.':'Nenhum cliente nesta etapa do funil.'}</div>`;
 
   $('#dealCards').innerHTML=deals.map(x=>{
     const buyer=leadMap.get(x.buyer_lead_id), seller=leadMap.get(x.seller_lead_id), listing=listingMap.get(x.listing_id);

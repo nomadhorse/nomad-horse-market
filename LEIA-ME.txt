@@ -1,1 +1,13 @@
-Nomad Horse Market V9 — funil comercial visual no painel, filtros por etapa e resumo de valor fechado/comissão, mantendo gestão de anúncios, clientes e negociações.
+Nomad Horse Market V10 — Agenda de Retornos
+
+Novidades:
+- Agenda comercial com Atrasados, Hoje, Próximos 7 dias e Sem retorno.
+- Campo "Próximo retorno" em cada cliente.
+- Atalhos para agendar hoje, amanhã ou em 3 dias.
+- Botão "Registrar contato agora".
+- Último contato e próximo retorno visíveis na ficha do cliente.
+- Filtros rápidos de follow-up no painel.
+
+Publicação:
+Envie todos os arquivos desta pasta para a raiz do mesmo repositório GitHub Pages e confirme na branch principal.
+Depois acesse: https://nomadhorse.com.br/nomad-horse-market/?v=10
