@@ -68,8 +68,80 @@ async function showView(name){
   $('.nav')?.classList.remove('open');
   $('.menu-toggle')?.setAttribute('aria-expanded','false');
   window.scrollTo({top:0,behavior:'smooth'});
-  $('#installPrompt')?.classList.toggle('hidden', name!=='home' || localStorage.getItem('nhm_install_dismissed')==='1');
-  if(name==='market') await renderListings();
+  $('#installPrompt')?.classList.toggle('hidden', name!=='home' || localStorage.getItem('nhm_install_dismissed_v20')==='1');
+  if(name==='market') await 
+function isStandaloneApp(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+function updateInstallUI(){
+  const installed=isStandaloneApp();
+  const mainBtn=$('#installAppMainBtn');
+  const status=$('#installAppStatus');
+  const section=$('#appInstallSection');
+  if(installed){
+    if(mainBtn){ mainBtn.textContent='APLICATIVO INSTALADO'; mainBtn.disabled=true; }
+    if(status) status.textContent='✅ Você está usando o Nomad Horse Market como aplicativo.';
+    $('#installPrompt')?.classList.add('hidden');
+    section?.classList.add('app-installed');
+  }else{
+    if(mainBtn){ mainBtn.textContent='INSTALAR APLICATIVO'; mainBtn.disabled=false; }
+    if(status) status.textContent='Funciona como app no celular e continua disponível normalmente pelo link.';
+    section?.classList.remove('app-installed');
+  }
+}
+function openInstallHelp(){
+  $('#installHelp')?.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+function closeInstallHelp(){
+  $('#installHelp')?.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+async function installNomadHorseApp(){
+  if(isStandaloneApp()){ updateInstallUI(); return; }
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const choice=await deferredPrompt.userChoice;
+    if(choice?.outcome==='accepted') localStorage.removeItem('nhm_install_dismissed_v20');
+    deferredPrompt=null;
+    $('#installPrompt')?.classList.add('hidden');
+    setTimeout(updateInstallUI,500);
+    return;
+  }
+  openInstallHelp();
+}
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  updateInstallUI();
+  if(currentView==='home' && localStorage.getItem('nhm_install_dismissed_v20')!=='1'){
+    $('#installPrompt')?.classList.remove('hidden');
+  }
+});
+window.addEventListener('appinstalled',()=>{
+  deferredPrompt=null;
+  localStorage.setItem('nhm_app_installed','1');
+  $('#installPrompt')?.classList.add('hidden');
+  updateInstallUI();
+});
+$('#installBtn')?.addEventListener('click',installNomadHorseApp);
+$('#installClose')?.addEventListener('click',()=>{
+  localStorage.setItem('nhm_install_dismissed_v20','1');
+  $('#installPrompt')?.classList.add('hidden');
+});
+window.matchMedia('(display-mode: standalone)').addEventListener?.('change',updateInstallUI);
+updateInstallUI();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register('./sw.js?v=20',{scope:'./'});
+      reg.update().catch(()=>{});
+    }catch(e){}
+  });
+}
+
+renderListings();
   if(name==='admin') await renderAdminGate();
 }
 
@@ -1275,8 +1347,8 @@ $('#filterCity')?.addEventListener('input',renderListings);
 $('#filterPrice')?.addEventListener('input',renderListings);
 $('#filterSearch')?.addEventListener('input',renderListings);
 $('#filterSort')?.addEventListener('change',renderListings);
-window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; if(currentView==='home'&&localStorage.getItem('nhm_install_dismissed')!=='1')$('#installPrompt')?.classList.remove('hidden'); });
-$('#installBtn')?.addEventListener('click',async()=>{ if(!deferredPrompt)return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('#installPrompt')?.classList.add('hidden'); });
-$('#installClose')?.addEventListener('click',()=>{ localStorage.setItem('nhm_install_dismissed','1'); $('#installPrompt')?.classList.add('hidden'); });
-if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
+
+
+
 renderListings();

@@ -1,22 +1,76 @@
 {
+  "id": "/nomad-horse-market/",
   "name": "Nomad Horse Market",
-  "short_name": "NH Market",
-  "start_url": "./",
-  "scope": "./",
+  "short_name": "Nomad Horse",
+  "description": "Compra, venda, fabricação e serviços para motorhomes, trailers, reboques e Kombi Home.",
+  "start_url": "/nomad-horse-market/?source=app",
+  "scope": "/nomad-horse-market/",
   "display": "standalone",
   "background_color": "#080808",
-  "theme_color": "#111111",
-  "description": "Marketplace gerenciado da Nomad Horse.",
+  "theme_color": "#0b0b0b",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "categories": [
+    "business",
+    "shopping",
+    "automotive"
+  ],
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Comprar",
+      "short_name": "Comprar",
+      "url": "/nomad-horse-market/#comprar",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Vender",
+      "short_name": "Vender",
+      "url": "/nomad-horse-market/#vender",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Serviços",
+      "short_name": "Serviços",
+      "url": "/nomad-horse-market/#servicos",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
