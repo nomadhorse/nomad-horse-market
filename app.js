@@ -16,6 +16,9 @@ let leadFilter='all';
 let followUpFilter='all';
 let priorityFilter='all';
 let financePeriod='all';
+const ADMIN_IDLE_MS=30*60*1000;
+let adminIdleTimer=null;
+let adminActivityEventsBound=false;
 
 function money(v){ const n=Number(v||0); return n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Sob consulta'; }
 function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -181,7 +184,7 @@ async function submitBuy(form){
     }));
   }
   toggleBusy(form,false);
-  if(error) return setResult(form,'Não foi possível enviar. Confira os dados e tente novamente.','error');
+  if(error) return setResult(form,publicSubmitMessage(error,'Não foi possível enviar. Confira os dados e tente novamente.'),'error');
   form.reset(); currentInterestListingId=null;
   setResult(form,'Recebemos seu interesse. A Nomad Horse vai analisar e entrar em contato.');
 }
@@ -209,8 +212,59 @@ async function submitSimpleLead(form,kind){
     p_interest:d.interest||null,p_message:d.message||null,p_listing_id:null,p_source:'nomad_horse_market'
   });
   toggleBusy(form,false);
-  if(error) return setResult(form,'Não foi possível enviar agora. Tente novamente.','error');
+  if(error) return setResult(form,publicSubmitMessage(error,'Não foi possível enviar agora. Tente novamente.'),'error');
   form.reset(); setResult(form,'Recebemos seus dados. A Nomad Horse vai analisar e entrar em contato.');
+}
+
+
+function formatSecurityDate(value){
+  if(!value) return 'Ainda não registrado';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return 'Ainda não registrado';
+  return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+}
+function updateSecurityPanel(){
+  const el=$('#lastBackupStatus');
+  if(el) el.textContent=formatSecurityDate(localStorage.getItem('nhm_last_backup_at'));
+}
+function markAdminActivity(){
+  if(sessionStorage.getItem('nhm_admin_active')==='1'){
+    sessionStorage.setItem('nhm_admin_last_activity',String(Date.now()));
+  }
+}
+function bindAdminActivityEvents(){
+  if(adminActivityEventsBound) return;
+  adminActivityEventsBound=true;
+  ['pointerdown','keydown','touchstart'].forEach(evt=>window.addEventListener(evt,markAdminActivity,{passive:true}));
+}
+function stopAdminIdleGuard(){
+  sessionStorage.removeItem('nhm_admin_active');
+  sessionStorage.removeItem('nhm_admin_last_activity');
+  if(adminIdleTimer){ clearInterval(adminIdleTimer); adminIdleTimer=null; }
+}
+function startAdminIdleGuard(){
+  bindAdminActivityEvents();
+  sessionStorage.setItem('nhm_admin_active','1');
+  sessionStorage.setItem('nhm_admin_last_activity',String(Date.now()));
+  if(adminIdleTimer) clearInterval(adminIdleTimer);
+  adminIdleTimer=setInterval(async()=>{
+    const last=Number(sessionStorage.getItem('nhm_admin_last_activity')||Date.now());
+    if(Date.now()-last>=ADMIN_IDLE_MS){
+      stopAdminIdleGuard();
+      await sb.auth.signOut();
+      if(currentView==='admin'){
+        await renderAdminGate();
+        alert('Sua sessão administrativa foi encerrada por segurança após 30 minutos sem atividade.');
+      }
+    }
+  },60000);
+  updateSecurityPanel();
+}
+function publicSubmitMessage(error,fallback){
+  const msg=String(error?.message||'');
+  if(/já recebid|aguarde um instante/i.test(msg)) return 'Esta solicitação já foi recebida. Aguarde um instante antes de enviar novamente.';
+  if(/nome inválido|whatsapp inválido|e-mail inválido|orçamento inválido|preço inválido|ano inválido/i.test(msg)) return 'Confira os dados informados e tente novamente.';
+  return fallback;
 }
 
 async function adminSignIn(form){
@@ -221,29 +275,39 @@ async function adminSignIn(form){
   if(error) return setResult(form,'E-mail ou senha inválidos.','error');
   await renderAdminGate();
 }
-async function adminSignUp(){
-  const email=$('#adminEmail').value.trim(), password=$('#adminPassword').value;
-  if(!email||password.length<6){ alert('Informe e-mail e uma senha com pelo menos 6 caracteres.'); return; }
-  const {error}=await sb.auth.signUp({email,password});
-  if(error){ alert('Não foi possível criar o acesso: '+error.message); return; }
-  alert('Acesso criado. Agora este e-mail precisa ser liberado como administrador da Nomad Horse.');
+async function adminLogout(){
+  stopAdminIdleGuard();
+  await sb.auth.signOut();
+  await renderAdminGate();
 }
-async function adminLogout(){ await sb.auth.signOut(); await renderAdminGate(); }
 
 async function renderAdminGate(){
   const login=$('#adminLogin'), content=$('#adminContent');
   login.classList.add('hidden'); content.classList.add('hidden');
+  const gateMsg=$('#adminGateMsg');
+  if(gateMsg) gateMsg.classList.add('hidden');
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){ login.classList.remove('hidden'); return; }
-  const {data:isAdmin,error}=await sb.rpc('is_admin');
-  if(error||!isAdmin){
+  if(!session){
+    stopAdminIdleGuard();
     login.classList.remove('hidden');
-    $('#adminGateMsg').className='notice error';
-    $('#adminGateMsg').textContent='Sua conta está conectada, mas ainda não foi liberada como administradora.';
-    $('#adminGateMsg').classList.remove('hidden');
     return;
   }
-  content.classList.remove('hidden'); await loadAdmin();
+  const {data:isAdmin,error}=await sb.rpc('is_admin');
+  if(error||!isAdmin){
+    stopAdminIdleGuard();
+    await sb.auth.signOut();
+    login.classList.remove('hidden');
+    if(gateMsg){
+      gateMsg.className='full form-result notice error';
+      gateMsg.textContent='Acesso não autorizado. Somente administradores liberados podem entrar no painel.';
+      gateMsg.classList.remove('hidden');
+    }
+    return;
+  }
+  startAdminIdleGuard();
+  content.classList.remove('hidden');
+  await loadAdmin();
+  updateSecurityPanel();
 }
 
 function listingStatusLabel(status){ return ({pending:'Aguardando',active:'Ativo',paused:'Pausado',sold:'Vendido',rejected:'Rejeitado'})[status]||status; }
@@ -1141,9 +1205,30 @@ async function approveListing(id){ await setListingStatus(id,'active'); }
 async function rejectListing(id){ if(confirm('Rejeitar este anúncio?')) await setListingStatus(id,'rejected'); }
 async function updateLeadStatus(id,status){ const {error}=await sb.from('leads').update({status}).eq('id',id); if(error)alert('Não foi possível atualizar o status.'); }
 async function exportData(){
-  const [l,a,d,h,g]=await Promise.all([sb.from('leads').select('*'),sb.from('listings').select('*'),sb.from('deals').select('*'),sb.from('client_history').select('*').order('created_at',{ascending:false}),sb.from('commercial_goals').select('*').order('month_start',{ascending:false})]);
-  const blob=new Blob([JSON.stringify({leads:l.data||[],listings:a.data||[],deals:d.data||[],client_history:h.data||[],commercial_goals:g.data||[]},null,2)],{type:'application/json'});
-  const el=document.createElement('a'); el.href=URL.createObjectURL(blob); el.download='nomad-horse-market-backup.json'; el.click(); URL.revokeObjectURL(el.href);
+  const [l,a,d,h,g]=await Promise.all([
+    sb.from('leads').select('*'),
+    sb.from('listings').select('*'),
+    sb.from('deals').select('*'),
+    sb.from('client_history').select('*').order('created_at',{ascending:false}),
+    sb.from('commercial_goals').select('*').order('month_start',{ascending:false})
+  ]);
+  if(l.error||a.error||d.error||h.error||g.error) return alert('Não foi possível gerar o backup agora.');
+  const generatedAt=new Date().toISOString();
+  const blob=new Blob([JSON.stringify({
+    generated_at:generatedAt,
+    leads:l.data||[],
+    listings:a.data||[],
+    deals:d.data||[],
+    client_history:h.data||[],
+    commercial_goals:g.data||[]
+  },null,2)],{type:'application/json'});
+  const el=document.createElement('a');
+  el.href=URL.createObjectURL(blob);
+  el.download=`nomad-horse-market-backup-${generatedAt.slice(0,10)}.json`;
+  el.click();
+  setTimeout(()=>URL.revokeObjectURL(el.href),1000);
+  localStorage.setItem('nhm_last_backup_at',generatedAt);
+  updateSecurityPanel();
 }
 
 $$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));

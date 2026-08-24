@@ -1,15 +1,35 @@
-NOMAD HORSE MARKET — V17.1 CORREÇÃO DO MENU
+NOMAD HORSE MARKET — V18 SEGURANÇA E PREPARAÇÃO PARA USO REAL
 
-Correção:
-- Corrigido erro de JavaScript da V17 que impedia o botão de menu (☰) e outras ações JavaScript de funcionar.
-- Mantidas todas as melhorias do Marketplace V17.
+Proteções aplicadas no banco:
+- RLS continua ativa nas tabelas comerciais.
+- Leads, negociações, histórico e metas não ficam públicos.
+- Funções internas de gatilho não aceitam mais execução direta pelo público.
+- Formulários públicos agora têm validações adicionais no servidor.
+- Envio duplicado em sequência é bloqueado para reduzir spam/cliques repetidos.
+- Interesse em anúncio exige nome e WhatsApp válidos também no servidor.
 
-Arquivos para substituir no GitHub:
+Proteções aplicadas no site:
+- Removido o botão público "Criar acesso inicial".
+- Conta autenticada sem permissão administrativa é desconectada automaticamente.
+- Sessão administrativa encerra após 30 minutos de inatividade.
+- Nova seção "Segurança e backup".
+- Backup registra data e hora da última exportação neste aparelho.
+- Arquivo de backup recebe a data no nome.
+- Mensagens públicas evitam expor detalhes internos do banco.
+
+Arquivos para substituir:
 app.js
 index.html
 styles.css
 sw.js
 LEIA-ME.txt
 
-Depois abra:
-nomadhorse.com.br/nomad-horse-market/?v=17.1
+Abrir depois:
+nomadhorse.com.br/nomad-horse-market/?v=18
+
+Teste:
+1. Painel: confirmar que "Criar acesso inicial" não aparece.
+2. Entrar normalmente.
+3. Ver "Segurança e backup".
+4. Tocar em "EXPORTAR BACKUP AGORA".
+5. Conferir se "Último backup" passa a mostrar data e hora.

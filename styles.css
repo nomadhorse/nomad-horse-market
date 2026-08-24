@@ -197,3 +197,16 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoratio
   .listing-details-meta{grid-template-columns:1fr 1fr}
   .listing-details-actions .btn{flex:1}
 }
+
+
+/* V18 — Segurança e preparação para uso real */
+.admin-login-security{margin:12px 0 16px;padding:11px 12px;border:1px solid #49391f;background:#15120d;border-radius:12px;color:#d7c8a8;font-size:11px;line-height:1.45}
+.security-heading{margin-top:24px}
+.security-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.security-card{background:linear-gradient(145deg,#151515,#0c0c0c);border:1px solid #2e2e2e;border-radius:15px;padding:13px;min-height:120px}
+.security-card span,.security-card strong,.security-card small{display:block}
+.security-card span{color:#aaa;font-size:11px;font-weight:700}
+.security-card strong{color:var(--gold);font-size:18px;margin:10px 0 5px}
+.security-card small{color:#777;font-size:10px;line-height:1.45}
+.security-actions{display:flex;justify-content:flex-end;margin:10px 0 4px}
+@media(max-width:900px){.security-grid{grid-template-columns:1fr 1fr}}
