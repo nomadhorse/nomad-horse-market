@@ -1,20 +1,19 @@
-Nomad Horse Market V11 — Central de Prioridades
+NOMAD HORSE MARKET — V12 | AÇÕES RÁPIDAS NA CENTRAL DE PRIORIDADES
 
-Novidades:
-- Central de prioridades no topo do painel administrativo.
-- Separa automaticamente: retornos atrasados, retornos de hoje, novos clientes sem contato e propostas em andamento.
-- Ordena primeiro o que exige ação mais urgente.
-- Atalhos diretos para Abrir cliente e WhatsApp.
-- Filtros rápidos por tipo de prioridade.
-- Mantém Funil comercial, Agenda de retornos, gestão de anúncios, clientes e negociações da V10.
+Atualização sobre a V11.2.
 
-Publicação:
-Envie todos os arquivos desta pasta para a raiz do mesmo repositório GitHub Pages e confirme na branch principal.
-Depois acesse: https://nomadhorse.com.br/nomad-horse-market/?v=11
+Novidades no cartão de prioridade:
+- Registrar contato sem abrir a ficha do cliente.
+- Reagendar retorno direto no cartão: amanhã às 9h, +3 dias ou +7 dias.
+- Concluir retorno atrasado/de hoje, registrando o contato e removendo o agendamento concluído.
+- WhatsApp e Abrir cliente continuam disponíveis.
+- Ao concluir um retorno de um cliente que também está em Proposta, ele continua na Central como Proposta.
 
+Para atualizar pelo celular, substitua estes 5 arquivos no repositório:
+app.js
+index.html
+styles.css
+sw.js
+LEIA-ME.txt
 
-V11.1: corrige a Central de Prioridades para que um cliente possa contar simultaneamente em Hoje/Atrasado e em Propostas.
-
-
-V11.2: corrige retornos vencidos no mesmo dia. Se o horário do retorno já passou, o cliente vai para Atrasados em vez de continuar em Hoje.
-Acesse: https://nomadhorse.com.br/nomad-horse-market/?v=11.2
+Depois acesse: nomadhorse.com.br/nomad-horse-market/?v=12

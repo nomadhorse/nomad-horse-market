@@ -47,3 +47,22 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoratio
 .priority-list{display:grid;gap:9px;margin-bottom:21px}.priority-item{display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(145deg,#141414,#0d0d0d);border:1px solid #2e2e2e;border-radius:15px;padding:13px 14px}
 .priority-item-overdue{border-color:#5a2a2a}.priority-item-today{border-color:#5a4729}.priority-item-new{border-color:#31485a}.priority-item-proposal{border-color:#51457d}.priority-item-main{min-width:0}.priority-reason{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.35px}.priority-item h4{font-size:17px;margin:6px 0 4px}.priority-detail{font-size:12px;color:#ddd}.priority-interest{font-size:11px;color:#8f8f8f;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}.priority-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.priority-empty{border:1px solid #29442f;background:#0d1710;color:#b9e7c3;border-radius:13px;padding:14px;font-size:13px}
 @media(max-width:760px){.priority-summary{grid-template-columns:1fr 1fr}.priority-item{display:block}.priority-actions{justify-content:stretch;margin-top:11px}.priority-actions .btn{flex:1}.priority-interest{max-width:100%}}
+
+/* V12 — ações rápidas na Central de Prioridades */
+.priority-actions{min-width:min(520px,50%);display:grid;gap:7px}
+.priority-actions-main,.priority-actions-quick{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.priority-actions-quick .btn{background:#151515}
+.priority-actions-quick .priority-complete{border-color:#31523a;color:#c9f3d4;background:#0d1710}
+.priority-schedule{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;padding:8px;border:1px solid #4b3a20;border-radius:11px;background:#15120d}
+.priority-schedule>span{font-size:11px;color:var(--gold);font-weight:900;margin-right:2px}
+.priority-schedule .btn{padding:7px 9px;font-size:11px}
+@media(max-width:760px){
+  .priority-actions{min-width:0;width:100%}
+  .priority-actions-main,.priority-actions-quick{justify-content:stretch}
+  .priority-actions-main .btn{flex:1 1 calc(50% - 7px)}
+  .priority-actions-quick .btn{flex:1 1 calc(50% - 7px)}
+  .priority-actions-quick .priority-complete{flex-basis:100%}
+  .priority-schedule{justify-content:stretch}
+  .priority-schedule>span{width:100%}
+  .priority-schedule .btn{flex:1}
+}

@@ -406,13 +406,80 @@ function renderPriorityCenter(leads,deals,listingMap,dealByLead){
         <div class="priority-interest">${esc(interest)}</div>
       </div>
       <div class="priority-actions">
-        <button class="btn small" onclick="openLeadEditor('${lead.id}')">Abrir cliente</button>
-        <button class="btn whatsapp small" onclick="openWhatsApp('${esc(lead.phone)}','${encodeURIComponent(lead.name)}')">WhatsApp</button>
+        <div class="priority-actions-main">
+          <button class="btn small" onclick="openLeadEditor('${lead.id}')">Abrir cliente</button>
+          <button class="btn whatsapp small" onclick="openWhatsApp('${esc(lead.phone)}','${encodeURIComponent(lead.name)}')">WhatsApp</button>
+        </div>
+        <div class="priority-actions-quick">
+          <button class="btn ghost small" onclick="priorityMarkContact('${lead.id}')">✓ Registrar contato</button>
+          <button class="btn ghost small" onclick="togglePrioritySchedule('${lead.id}')">🗓 Reagendar</button>
+          ${['overdue','today'].includes(kind)?`<button class="btn ghost small priority-complete" onclick="priorityCompleteFollowUp('${lead.id}')">✓ Concluir retorno</button>`:''}
+        </div>
+        <div id="priority-schedule-${lead.id}" class="priority-schedule hidden">
+          <span>Novo retorno:</span>
+          <button class="btn ghost small" onclick="priorityReschedule('${lead.id}','tomorrow')">Amanhã 9h</button>
+          <button class="btn ghost small" onclick="priorityReschedule('${lead.id}','3days')">+3 dias</button>
+          <button class="btn ghost small" onclick="priorityReschedule('${lead.id}','7days')">+7 dias</button>
+        </div>
       </div>
     </article>`;
   }).join(''):`<div class="priority-empty">✅ ${priorityFilter==='all'?'Nenhuma prioridade pendente agora.':'Nenhum cliente nesta prioridade.'}</div>`;
   const clear=$('#priorityClear');
   if(clear) clear.classList.toggle('hidden',priorityFilter==='all');
+}
+
+function togglePrioritySchedule(id){
+  const target=document.getElementById(`priority-schedule-${id}`);
+  if(!target) return;
+  $$('.priority-schedule').forEach(el=>{ if(el!==target) el.classList.add('hidden'); });
+  target.classList.toggle('hidden');
+}
+function priorityFollowUpIso(kind){
+  const d=new Date();
+  if(kind==='tomorrow'){ d.setDate(d.getDate()+1); d.setHours(9,0,0,0); }
+  else if(kind==='3days'){ d.setDate(d.getDate()+3); d.setHours(9,0,0,0); }
+  else if(kind==='7days'){ d.setDate(d.getDate()+7); d.setHours(9,0,0,0); }
+  else { d.setDate(d.getDate()+1); d.setHours(9,0,0,0); }
+  return d.toISOString();
+}
+async function priorityMarkContact(id){
+  const {data:lead,error:readError}=await sb.from('leads').select('id,status').eq('id',id).maybeSingle();
+  if(readError||!lead) return alert('Não foi possível carregar este cliente.');
+  const status=lead.status==='novo'?'contato_feito':lead.status;
+  const {error}=await sb.from('leads').update({
+    last_contact_at:new Date().toISOString(),
+    status,
+    updated_at:new Date().toISOString()
+  }).eq('id',id);
+  if(error) return alert('Não foi possível registrar o contato.');
+  await loadAdmin();
+  alert('Contato registrado. O retorno agendado foi mantido.');
+}
+async function priorityReschedule(id,kind){
+  const next=priorityFollowUpIso(kind);
+  const {error}=await sb.from('leads').update({
+    next_follow_up_at:next,
+    updated_at:new Date().toISOString()
+  }).eq('id',id);
+  if(error) return alert('Não foi possível reagendar o retorno.');
+  await loadAdmin();
+  alert(`Retorno reagendado para ${formatDateTime(next)}.`);
+}
+async function priorityCompleteFollowUp(id){
+  if(!confirm('Concluir este retorno? O contato será registrado agora e o agendamento atual será removido.')) return;
+  const {data:lead,error:readError}=await sb.from('leads').select('id,status').eq('id',id).maybeSingle();
+  if(readError||!lead) return alert('Não foi possível carregar este cliente.');
+  const status=lead.status==='novo'?'contato_feito':lead.status;
+  const now=new Date().toISOString();
+  const {error}=await sb.from('leads').update({
+    last_contact_at:now,
+    next_follow_up_at:null,
+    status,
+    updated_at:now
+  }).eq('id',id);
+  if(error) return alert('Não foi possível concluir o retorno.');
+  await loadAdmin();
+  alert('Retorno concluído. Se precisar, você pode agendar um novo retorno depois.');
 }
 
 function scheduleFollowUpPreset(kind){
