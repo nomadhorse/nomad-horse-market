@@ -1,13 +1,16 @@
-NOMAD HORSE MARKET — V12.1 | CORREÇÃO DE RETORNO
+NOMAD HORSE MARKET — V13 HISTÓRICO DO CLIENTE
 
-Correções sobre a V12:
-- O botão “Concluir retorno” agora aparece sempre que o cliente tem algum retorno agendado, mesmo que seja futuro.
-- O atalho “Hoje às 17h” foi renomeado para “Próximo às 17h”, porque depois das 17h o sistema agenda automaticamente para o dia seguinte.
+Novidades:
+- Linha do tempo automática dentro da ficha do cliente.
+- Registra lead recebido, mudanças de status, contatos, retornos agendados/reagendados/concluídos, negociação, proposta, valores e comissão.
+- Histórico fica salvo no Supabase e entra no Exportar backup.
+- Mantém todas as funções da V12.1.
 
-Para atualizar pelo celular, substitua estes 4 arquivos no repositório:
+Arquivos para substituir no GitHub:
 app.js
 index.html
+styles.css
 sw.js
 LEIA-ME.txt
 
-Depois acesse: nomadhorse.com.br/nomad-horse-market/?v=12.1
+Depois abra: nomadhorse.com.br/nomad-horse-market/?v=13

@@ -517,6 +517,55 @@ function openWhatsApp(phone,name=''){
   try{name=decodeURIComponent(name||'')}catch(e){} const msg=encodeURIComponent(`Olá ${name||''}, aqui é da Nomad Horse. Recebemos seu contato pelo Nomad Horse Market.`);
   window.open(`https://wa.me/${d}?text=${msg}`,'_blank','noopener');
 }
+function historyEventPresentation(type){
+  const map={
+    lead_created:['🆕','Lead recebido','history-lead'],history_started:['🕘','Histórico ativado','history-system'],status_snapshot:['📌','Situação atual','history-status'],
+    status_changed:['🔄','Status alterado','history-status'],contact_recorded:['📞','Contato registrado','history-contact'],
+    follow_up_scheduled:['📅','Retorno agendado','history-follow'],follow_up_rescheduled:['🗓️','Retorno reagendado','history-follow'],follow_up_completed:['✅','Retorno concluído','history-contact'],
+    internal_note_updated:['📝','Observação interna atualizada','history-note'],deal_created:['💼','Negociação criada','history-deal'],deal_snapshot:['📌','Situação da negociação','history-deal'],
+    deal_stage_changed:['📈','Etapa da negociação alterada','history-deal'],asking_price_updated:['💰','Preço pedido atualizado','history-money'],offer_updated:['🤝','Oferta atualizada','history-money'],
+    agreed_price_updated:['🏁','Preço fechado atualizado','history-money'],commission_updated:['💵','Comissão atualizada','history-money'],deal_note_updated:['📝','Observação da negociação atualizada','history-note']
+  };
+  return map[type]||['•','Atualização','history-system'];
+}
+function historyMoney(v){ return v==null||v===''?'—':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function historyDetail(event){
+  const d=event.details||{};
+  switch(event.event_type){
+    case 'status_changed': return `${leadStatusLabel(d.from)||d.from||'—'} → ${leadStatusLabel(d.to)||d.to||'—'}`;
+    case 'status_snapshot': return leadStatusLabel(d.to)||d.to||event.description||'';
+    case 'follow_up_scheduled': return d.to?`Agendado para ${formatDateTime(d.to)}`:(event.description||'');
+    case 'follow_up_rescheduled': return `${d.from?formatDateTime(d.from):'—'} → ${d.to?formatDateTime(d.to):'—'}`;
+    case 'follow_up_completed': return d.from?`Retorno de ${formatDateTime(d.from)} concluído.`:(event.description||'');
+    case 'contact_recorded': return d.at?`Contato em ${formatDateTime(d.at)}`:(event.description||'');
+    case 'deal_stage_changed': return `${dealStageLabel(d.from)||d.from||'—'} → ${dealStageLabel(d.to)||d.to||'—'}`;
+    case 'deal_snapshot': {
+      const parts=[]; if(d.stage)parts.push(`Etapa: ${dealStageLabel(d.stage)||d.stage}`); if(d.offered_price!=null)parts.push(`Oferta: ${historyMoney(d.offered_price)}`); if(d.agreed_price!=null)parts.push(`Fechado: ${historyMoney(d.agreed_price)}`); return parts.join(' • ')||event.description||'';
+    }
+    case 'asking_price_updated': return `${historyMoney(d.from)} → ${historyMoney(d.to)}`;
+    case 'offer_updated': return `${historyMoney(d.from)} → ${historyMoney(d.to)}`;
+    case 'agreed_price_updated': return `${historyMoney(d.from)} → ${historyMoney(d.to)}`;
+    case 'commission_updated': return d.amount!=null?`Comissão calculada: ${historyMoney(d.amount)}`:(event.description||'');
+    case 'deal_created': return d.asking_price!=null?`Preço pedido inicial: ${historyMoney(d.asking_price)}`:(event.description||'');
+    default: return event.description||'';
+  }
+}
+async function renderLeadHistory(leadId){
+  const box=$('#leadHistory'); if(!box)return;
+  box.innerHTML='<div class="history-loading">Carregando histórico...</div>';
+  const {data,error}=await sb.from('client_history').select('id,event_type,title,description,details,created_at').eq('lead_id',leadId).order('created_at',{ascending:false}).limit(100);
+  if(error){ box.innerHTML='<div class="notice error">Não foi possível carregar o histórico.</div>'; return; }
+  const items=data||[];
+  box.innerHTML=items.length?items.map(ev=>{
+    const [icon,fallback,cls]=historyEventPresentation(ev.event_type);
+    const detail=historyDetail(ev);
+    return `<article class="history-item ${cls}">
+      <div class="history-marker">${icon}</div>
+      <div class="history-content"><div class="history-top"><strong>${esc(ev.title||fallback)}</strong><time>${esc(formatDateTime(ev.created_at))}</time></div>${detail?`<p>${esc(detail)}</p>`:''}</div>
+    </article>`;
+  }).join(''):'<div class="history-empty">Nenhum evento registrado ainda.</div>';
+}
+
 function closeLeadEditor(){
   $('#leadEditor')?.classList.add('hidden');
   document.body.classList.remove('modal-open');
@@ -562,6 +611,7 @@ async function openLeadEditor(id){
   $('#leadWhatsBtn').onclick=()=>openWhatsApp(lead.phone,lead.name);
   renderLeadDeal(deal,lead,listing);
   $('#leadEditor').classList.remove('hidden'); document.body.classList.add('modal-open');
+  renderLeadHistory(id);
 }
 function renderLeadDeal(deal,lead,listing){
   const box=$('#leadDealArea');
@@ -605,6 +655,7 @@ async function saveLeadAdmin(form){
     status:d.status,admin_notes:d.admin_notes.trim()||null,next_follow_up_at:nextFollow,updated_at:new Date().toISOString()
   }).eq('id',d.id);
   if(error)return alert('Não foi possível salvar os dados do cliente.');
+  await openLeadEditor(d.id);
   await loadAdmin();
   alert('Cliente atualizado.');
 }
@@ -741,8 +792,8 @@ async function approveListing(id){ await setListingStatus(id,'active'); }
 async function rejectListing(id){ if(confirm('Rejeitar este anúncio?')) await setListingStatus(id,'rejected'); }
 async function updateLeadStatus(id,status){ const {error}=await sb.from('leads').update({status}).eq('id',id); if(error)alert('Não foi possível atualizar o status.'); }
 async function exportData(){
-  const [l,a,d]=await Promise.all([sb.from('leads').select('*'),sb.from('listings').select('*'),sb.from('deals').select('*')]);
-  const blob=new Blob([JSON.stringify({leads:l.data||[],listings:a.data||[],deals:d.data||[]},null,2)],{type:'application/json'});
+  const [l,a,d,h]=await Promise.all([sb.from('leads').select('*'),sb.from('listings').select('*'),sb.from('deals').select('*'),sb.from('client_history').select('*').order('created_at',{ascending:false})]);
+  const blob=new Blob([JSON.stringify({leads:l.data||[],listings:a.data||[],deals:d.data||[],client_history:h.data||[]},null,2)],{type:'application/json'});
   const el=document.createElement('a'); el.href=URL.createObjectURL(blob); el.download='nomad-horse-market-backup.json'; el.click(); URL.revokeObjectURL(el.href);
 }
 

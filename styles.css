@@ -66,3 +66,17 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoratio
   .priority-schedule>span{width:100%}
   .priority-schedule .btn{flex:1}
 }
+
+
+/* V13 — histórico automático do cliente */
+.history-section{border-top:1px solid #2b2b2b;margin-top:22px;padding-top:6px}
+.client-history{display:grid;gap:0;margin-top:4px;position:relative}
+.history-item{display:grid;grid-template-columns:38px 1fr;gap:10px;position:relative;padding:10px 0}
+.history-item:not(:last-child)::before{content:"";position:absolute;left:18px;top:42px;bottom:-8px;width:1px;background:#343434}
+.history-marker{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;background:#171717;border:1px solid #3a3a3a;font-size:16px;z-index:1}
+.history-content{background:#0d0d0d;border:1px solid #292929;border-radius:12px;padding:10px 11px;min-width:0}
+.history-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.history-top strong{font-size:13px}.history-top time{font-size:10px;color:#888;white-space:nowrap}
+.history-content p{margin:5px 0 0;color:#aaa;font-size:12px;line-height:1.45}
+.history-lead .history-marker{border-color:#355d7c;background:#10202d}.history-status .history-marker{border-color:#51457d;background:#19152a}.history-contact .history-marker{border-color:#28573a;background:#0d1c12}.history-follow .history-marker{border-color:#5a4729;background:#17130e}.history-deal .history-marker,.history-money .history-marker{border-color:#6d552c;background:#1b160e}.history-note .history-marker{border-color:#444;background:#181818}
+.history-loading,.history-empty{padding:14px;border:1px dashed #3a3a3a;border-radius:12px;color:#999;font-size:12px;text-align:center}
+@media(max-width:560px){.history-item{grid-template-columns:34px 1fr}.history-marker{width:32px;height:32px}.history-item:not(:last-child)::before{left:16px;top:38px}.history-top{display:block}.history-top time{display:block;margin-top:3px}}
