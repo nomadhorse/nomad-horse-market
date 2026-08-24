@@ -1109,7 +1109,9 @@ async function openLeadEditor(id){
     <div><span>WhatsApp</span><strong>${esc(lead.phone||'—')}</strong></div>
     <div><span>E-mail</span><strong>${esc(lead.email||'—')}</strong></div>
     <div><span>Cidade</span><strong>${esc([lead.city,lead.state].filter(Boolean).join(' - ')||'—')}</strong></div>
-    <div><span>Interesse</span><strong>${esc(lead.vehicle_type||lead.interest||listing?.vehicle_type||'—')}</strong></div>
+<div><span>Veículo / tipo</span><strong>${esc(lead.vehicle_type||listing?.vehicle_type||lead.interest||'—')}</strong></div>
+${lead.lead_type==='Serviço' ? '<div><span>Serviço desejado</span><strong>'+esc(lead.interest||'—')+'</strong></div>' : ''}
+   
     <div><span>Orçamento</span><strong>${lead.budget?money(lead.budget):'—'}</strong></div>
     <div><span>Prazo</span><strong>${esc(lead.timeline||'—')}</strong></div>
     <div><span>Último contato</span><strong>${esc(formatDateTime(lead.last_contact_at))}</strong></div>
