@@ -1,19 +1,13 @@
-NOMAD HORSE MARKET — V12 | AÇÕES RÁPIDAS NA CENTRAL DE PRIORIDADES
+NOMAD HORSE MARKET — V12.1 | CORREÇÃO DE RETORNO
 
-Atualização sobre a V11.2.
+Correções sobre a V12:
+- O botão “Concluir retorno” agora aparece sempre que o cliente tem algum retorno agendado, mesmo que seja futuro.
+- O atalho “Hoje às 17h” foi renomeado para “Próximo às 17h”, porque depois das 17h o sistema agenda automaticamente para o dia seguinte.
 
-Novidades no cartão de prioridade:
-- Registrar contato sem abrir a ficha do cliente.
-- Reagendar retorno direto no cartão: amanhã às 9h, +3 dias ou +7 dias.
-- Concluir retorno atrasado/de hoje, registrando o contato e removendo o agendamento concluído.
-- WhatsApp e Abrir cliente continuam disponíveis.
-- Ao concluir um retorno de um cliente que também está em Proposta, ele continua na Central como Proposta.
-
-Para atualizar pelo celular, substitua estes 5 arquivos no repositório:
+Para atualizar pelo celular, substitua estes 4 arquivos no repositório:
 app.js
 index.html
-styles.css
 sw.js
 LEIA-ME.txt
 
-Depois acesse: nomadhorse.com.br/nomad-horse-market/?v=12
+Depois acesse: nomadhorse.com.br/nomad-horse-market/?v=12.1

@@ -413,7 +413,7 @@ function renderPriorityCenter(leads,deals,listingMap,dealByLead){
         <div class="priority-actions-quick">
           <button class="btn ghost small" onclick="priorityMarkContact('${lead.id}')">✓ Registrar contato</button>
           <button class="btn ghost small" onclick="togglePrioritySchedule('${lead.id}')">🗓 Reagendar</button>
-          ${['overdue','today'].includes(kind)?`<button class="btn ghost small priority-complete" onclick="priorityCompleteFollowUp('${lead.id}')">✓ Concluir retorno</button>`:''}
+          ${lead.next_follow_up_at?`<button class="btn ghost small priority-complete" onclick="priorityCompleteFollowUp('${lead.id}')">✓ Concluir retorno</button>`:''}
         </div>
         <div id="priority-schedule-${lead.id}" class="priority-schedule hidden">
           <span>Novo retorno:</span>
