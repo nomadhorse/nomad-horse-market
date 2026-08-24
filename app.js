@@ -69,7 +69,9 @@ async function showView(name){
   $('.menu-toggle')?.setAttribute('aria-expanded','false');
   window.scrollTo({top:0,behavior:'smooth'});
   $('#installPrompt')?.classList.toggle('hidden', name!=='home' || localStorage.getItem('nhm_install_dismissed_v20')==='1');
-  if(name==='market') await 
+ if(name==='market') await renderListings();
+if(name==='admin') await renderAdminGate();
+}
 function isStandaloneApp(){
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
 }
@@ -141,9 +143,7 @@ if('serviceWorker' in navigator){
   });
 }
 
-renderListings();
-  if(name==='admin') await renderAdminGate();
-}
+
 
 async function renderListings(){
   const wrap=$('#listingGrid'); if(!wrap)return;
