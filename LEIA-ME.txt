@@ -14,3 +14,7 @@ Depois acesse: https://nomadhorse.com.br/nomad-horse-market/?v=11
 
 
 V11.1: corrige a Central de Prioridades para que um cliente possa contar simultaneamente em Hoje/Atrasado e em Propostas.
+
+
+V11.2: corrige retornos vencidos no mesmo dia. Se o horário do retorno já passou, o cliente vai para Atrasados em vez de continuar em Hoje.
+Acesse: https://nomadhorse.com.br/nomad-horse-market/?v=11.2

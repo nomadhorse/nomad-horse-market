@@ -298,7 +298,7 @@ function followUpState(lead,now=new Date()){
   const start=new Date(now); start.setHours(0,0,0,0);
   const end=new Date(now); end.setHours(23,59,59,999);
   const week=new Date(end); week.setDate(week.getDate()+7);
-  if(d<start) return 'overdue';
+  if(d<now) return 'overdue';
   if(d<=end) return 'today';
   if(d<=week) return 'week';
   return 'later';

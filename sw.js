@@ -1,5 +1,5 @@
-const CACHE='nh-market-v11-1';
-const ASSETS=['./','./index.html','./styles.css?v=11.1','./app.js?v=11.1','./manifest.json','./icon-192.png','./icon-512.png','./trailer-nomad-horse.png','./kombi-home-nomad-horse.png','./motorhome-nomad-horse.png'];
+const CACHE='nh-market-v11-2';
+const ASSETS=['./','./index.html','./styles.css?v=11.2','./app.js?v=11.2','./manifest.json','./icon-192.png','./icon-512.png','./trailer-nomad-horse.png','./kombi-home-nomad-horse.png','./motorhome-nomad-horse.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>caches.match('./index.html')));return;}if(['script','style'].includes(e.request.destination)){e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}).catch(()=>caches.match(e.request)));return;}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});
