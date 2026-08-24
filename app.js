@@ -144,7 +144,7 @@ function closeListingDetails(){
   document.body.classList.remove('modal-open');
 }
 
-function interestfunction interest(id,title,vehicleType){
+function interest(id,title,vehicleType){
   currentInterestListingId=id;
   showView('buy');
   const selectedType=decodeURIComponent(vehicleType||'');

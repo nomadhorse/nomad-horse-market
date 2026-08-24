@@ -1,19 +1,8 @@
-NOMAD HORSE MARKET — V17 MARKETPLACE FINAL
+NOMAD HORSE MARKET — V17.1 CORREÇÃO DO MENU
 
-Melhorias públicas:
-- Busca por título, descrição, cidade, estado, tipo e etiqueta.
-- Filtros de tipo, cidade e preço máximo mantidos.
-- Ordenação por destaques/mais recentes, menor preço, maior preço, ano mais novo e mais recentes.
-- Contador de anúncios encontrados.
-- Botão para limpar todos os filtros.
-- Cards com descrição resumida, localização, ano e destaque.
-- Novo botão "Ver detalhes" com modal completo do anúncio.
-- Modal mostra foto, tipo, ano, localização, valor e descrição.
-- Reforço de privacidade: contato do proprietário continua protegido.
-- Compartilhamento gera link identificando o anúncio.
-- Mantém todas as funções da V16.
-
-Não exige alteração no banco.
+Correção:
+- Corrigido erro de JavaScript da V17 que impedia o botão de menu (☰) e outras ações JavaScript de funcionar.
+- Mantidas todas as melhorias do Marketplace V17.
 
 Arquivos para substituir no GitHub:
 app.js
@@ -23,4 +12,4 @@ sw.js
 LEIA-ME.txt
 
 Depois abra:
-nomadhorse.com.br/nomad-horse-market/?v=17
+nomadhorse.com.br/nomad-horse-market/?v=17.1
