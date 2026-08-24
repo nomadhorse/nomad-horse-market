@@ -502,6 +502,121 @@ function priorityLabel(kind){
 function priorityIcon(kind){
   return ({overdue:'⚠️',today:'📅',new:'🆕',proposal:'💼'})[kind]||'•';
 }
+
+function hoursSince(value){
+  if(!value) return Infinity;
+  const t=new Date(value).getTime();
+  if(Number.isNaN(t)) return Infinity;
+  return Math.max(0,(Date.now()-t)/3600000);
+}
+function daysSince(value){ return hoursSince(value)/24; }
+function activeLeadForAlerts(lead){
+  return lead && !['fechado','perdido'].includes(lead.status);
+}
+function alertLeadFromDeal(deal,leadMap){
+  return leadMap.get(deal.buyer_lead_id)||leadMap.get(deal.seller_lead_id)||null;
+}
+function renderCommercialAlerts(leads,deals,listingMap){
+  const leadMap=new Map(leads.map(x=>[x.id,x]));
+  const alerts=[];
+
+  leads.forEach(lead=>{
+    if(!activeLeadForAlerts(lead)) return;
+
+    if(lead.status==='novo' && hoursSince(lead.created_at)>=2){
+      alerts.push({
+        type:'new_waiting',
+        severity:'blue',
+        icon:'🆕',
+        title:'Lead novo aguardando contato',
+        detail:`${lead.name} está sem primeiro atendimento há ${Math.max(2,Math.floor(hoursSince(lead.created_at)))}h.`,
+        lead
+      });
+    }
+
+    if(!lead.next_follow_up_at && lead.status!=='novo'){
+      alerts.push({
+        type:'no_follow',
+        severity:'gold',
+        icon:'📅',
+        title:'Cliente sem próximo retorno',
+        detail:`${lead.name} está em atendimento, mas não tem retorno agendado.`,
+        lead
+      });
+    }
+  });
+
+  deals.forEach(deal=>{
+    if(['fechado','perdido'].includes(deal.stage)) return;
+    const lead=alertLeadFromDeal(deal,leadMap);
+    if(!lead || !activeLeadForAlerts(lead)) return;
+    const listing=listingMap.get(deal.listing_id);
+    const project=listing?.title||lead.vehicle_type||lead.interest||'Negociação';
+
+    if(deal.stage==='proposta' && hoursSince(lead.last_contact_at)>=48){
+      alerts.push({
+        type:'stale_proposal',
+        severity:'purple',
+        icon:'💼',
+        title:'Proposta precisa de acompanhamento',
+        detail:`${lead.name} • ${project} • sem contato há ${Math.max(2,Math.floor(hoursSince(lead.last_contact_at)/24))} dias.`,
+        lead,
+        deal
+      });
+    }
+
+    if(['qualificado','negociacao','proposta'].includes(deal.stage) && daysSince(deal.updated_at||deal.created_at)>=7){
+      alerts.push({
+        type:'stale_deal',
+        severity:'red',
+        icon:'⏳',
+        title:'Negociação parada',
+        detail:`${lead.name} • ${project} • sem atualização há ${Math.max(7,Math.floor(daysSince(deal.updated_at||deal.created_at)))} dias.`,
+        lead,
+        deal
+      });
+    }
+  });
+
+  const counts={
+    new_waiting:alerts.filter(x=>x.type==='new_waiting').length,
+    no_follow:alerts.filter(x=>x.type==='no_follow').length,
+    stale_proposal:alerts.filter(x=>x.type==='stale_proposal').length,
+    stale_deal:alerts.filter(x=>x.type==='stale_deal').length
+  };
+
+  const summary=$('#commercialAlertsSummary');
+  if(summary) summary.innerHTML=`
+    <div class="alert-kpi alert-kpi-blue"><span>🆕 Novos aguardando</span><strong>${counts.new_waiting}</strong><small>Mais de 2h sem contato</small></div>
+    <div class="alert-kpi alert-kpi-gold"><span>📅 Sem retorno</span><strong>${counts.no_follow}</strong><small>Atendimento sem próxima data</small></div>
+    <div class="alert-kpi alert-kpi-purple"><span>💼 Propostas paradas</span><strong>${counts.stale_proposal}</strong><small>Mais de 48h sem contato</small></div>
+    <div class="alert-kpi alert-kpi-red"><span>⏳ Negociações paradas</span><strong>${counts.stale_deal}</strong><small>Mais de 7 dias sem atualização</small></div>`;
+
+  const list=$('#commercialAlertsList');
+  if(!list) return;
+  if(!alerts.length){
+    list.innerHTML='<div class="commercial-alerts-empty">✅ Nenhum alerta comercial agora. O acompanhamento está em dia.</div>';
+    return;
+  }
+
+  const priority={red:1,purple:2,gold:3,blue:4};
+  alerts.sort((a,b)=>(priority[a.severity]||9)-(priority[b.severity]||9));
+
+  list.innerHTML=alerts.slice(0,12).map(a=>`
+    <article class="commercial-alert commercial-alert-${a.severity}">
+      <div class="commercial-alert-icon">${a.icon}</div>
+      <div class="commercial-alert-body">
+        <strong>${esc(a.title)}</strong>
+        <p>${esc(a.detail)}</p>
+        <div class="commercial-alert-actions">
+          <button class="btn small" onclick="openLeadEditor('${a.lead.id}')">Abrir cliente</button>
+          <button class="btn whatsapp small" onclick="openWhatsApp('${esc(a.lead.phone||'')}','${encodeURIComponent(a.lead.name||'Cliente')}')">WhatsApp</button>
+          ${!a.lead.next_follow_up_at?`<button class="btn ghost small" onclick="priorityReschedule('${a.lead.id}','tomorrow')">Agendar amanhã 9h</button>`:''}
+        </div>
+      </div>
+    </article>`).join('');
+}
+
 function renderPriorityCenter(leads,deals,listingMap,dealByLead){
   const open=leads.filter(x=>!['fechado','perdido'].includes(x.status));
   const entries=open.map(lead=>{
@@ -895,6 +1010,7 @@ async function loadAdmin(){
   renderCommercialResults(deals,leads,listingMap);
   renderMonthlyGoals(deals,monthlyGoal);
   renderPriorityCenter(leads,deals,listingMap,dealByLead);
+  renderCommercialAlerts(leads,deals,listingMap);
   renderSalesFunnel(leads,deals);
   renderFollowUps(leads);
   let visibleLeads=leadFilter==='all'?leads:leads.filter(x=>x.status===leadFilter);

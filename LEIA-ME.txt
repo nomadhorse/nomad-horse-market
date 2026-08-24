@@ -1,14 +1,16 @@
-NOMAD HORSE MARKET — V15 METAS E PROJEÇÃO
+NOMAD HORSE MARKET — V16 ALERTAS E ACOMPANHAMENTO
 
 Novidades:
-- Novo painel "Metas e projeção" dentro do Painel Nomad Horse.
-- Permite definir e salvar a meta mensal de vendas.
-- Permite definir e salvar a meta mensal de comissão.
-- Mostra valor atingido, percentual da meta e quanto falta.
-- Calcula projeção de vendas e de comissão até o fim do mês.
-- As metas ficam salvas no Supabase por mês.
-- O backup agora inclui também as metas comerciais.
-- Mantém todas as funções da V14.
+- Nova seção "Alertas comerciais" no Painel.
+- Detecta lead novo há mais de 2 horas sem atendimento.
+- Detecta cliente em atendimento sem próximo retorno.
+- Detecta proposta há mais de 48 horas sem novo contato.
+- Detecta negociação há mais de 7 dias sem atualização.
+- Cada alerta oferece acesso rápido ao cliente e WhatsApp.
+- Quando o cliente está sem retorno, é possível agendar amanhã às 9h diretamente no alerta.
+- Mantém todas as funções da V15.
+
+Não exige alteração adicional no banco.
 
 Arquivos para substituir no GitHub:
 app.js
@@ -18,4 +20,4 @@ sw.js
 LEIA-ME.txt
 
 Depois abra:
-nomadhorse.com.br/nomad-horse-market/?v=15
+nomadhorse.com.br/nomad-horse-market/?v=16
