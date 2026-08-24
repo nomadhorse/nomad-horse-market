@@ -210,3 +210,35 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoratio
 .security-card small{color:#777;font-size:10px;line-height:1.45}
 .security-actions{display:flex;justify-content:flex-end;margin:10px 0 4px}
 @media(max-width:900px){.security-grid{grid-template-columns:1fr 1fr}}
+
+
+/* V19 — Revisão final e lançamento 1.0 */
+.privacy-consent{margin-top:2px}
+.privacy-consent label{display:flex;gap:9px;align-items:flex-start;color:#aaa;font-size:11px;line-height:1.45}
+.privacy-consent input{margin-top:2px;accent-color:#cda85a}
+.privacy-link,.footer-privacy{border:0;background:transparent;color:var(--gold);padding:0;text-decoration:underline;cursor:pointer;font:inherit}
+.privacy-modal-card{width:min(620px,100%)}
+.privacy-copy{display:grid;gap:10px;margin:12px 0 16px}
+.privacy-copy p{margin:0;color:#c7c7c7;font-size:13px;line-height:1.6}
+.footer-launch{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+.footer-privacy{text-decoration:none}
+.launch-heading{margin-top:24px;align-items:center}
+.release-badge{border:1px solid #66502a;background:#15120d;color:var(--gold);border-radius:999px;padding:7px 10px;font-size:10px;font-weight:900;letter-spacing:.6px;white-space:nowrap}
+.launch-checklist{margin-bottom:24px}
+.launch-status{border-radius:15px;padding:14px;margin-bottom:10px}
+.launch-status strong,.launch-status span{display:block}
+.launch-status strong{font-size:15px}
+.launch-status span{font-size:11px;margin-top:4px;line-height:1.45}
+.launch-ready{background:#0d1810;border:1px solid #285033;color:#bee1c7}
+.launch-review{background:#18140c;border:1px solid #5d4823;color:#e5c98e}
+.launch-items{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.launch-item{display:flex;gap:10px;background:#111;border:1px solid #2b2b2b;border-radius:13px;padding:12px}
+.launch-item.ok{border-color:#263b2d}
+.launch-item.warn{border-color:#5a4524;background:#15120d}
+.launch-item>span{flex:0 0 22px}
+.launch-item strong,.launch-item small{display:block}
+.launch-item strong{font-size:12px;color:#eee;margin-bottom:4px}
+.launch-item small{font-size:10px;color:#888;line-height:1.4}
+@media(max-width:700px){
+  .launch-items{grid-template-columns:1fr}
+}

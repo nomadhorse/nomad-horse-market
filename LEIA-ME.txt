@@ -1,35 +1,35 @@
-NOMAD HORSE MARKET — V18 SEGURANÇA E PREPARAÇÃO PARA USO REAL
+NOMAD HORSE MARKET — V19 / VERSÃO OFICIAL 1.0
 
-Proteções aplicadas no banco:
-- RLS continua ativa nas tabelas comerciais.
-- Leads, negociações, histórico e metas não ficam públicos.
-- Funções internas de gatilho não aceitam mais execução direta pelo público.
-- Formulários públicos agora têm validações adicionais no servidor.
-- Envio duplicado em sequência é bloqueado para reduzir spam/cliques repetidos.
-- Interesse em anúncio exige nome e WhatsApp válidos também no servidor.
+Etapa final de revisão e lançamento.
 
-Proteções aplicadas no site:
-- Removido o botão público "Criar acesso inicial".
-- Conta autenticada sem permissão administrativa é desconectada automaticamente.
-- Sessão administrativa encerra após 30 minutos de inatividade.
-- Nova seção "Segurança e backup".
-- Backup registra data e hora da última exportação neste aparelho.
-- Arquivo de backup recebe a data no nome.
-- Mensagens públicas evitam expor detalhes internos do banco.
+Novidades:
+- Novo "Status de lançamento" no Painel.
+- Checklist automático de segurança, marketplace, CRM, resultados, backup e dados de teste.
+- Identifica leads com nome começando por "Teste" para revisão antes da divulgação.
+- Aviso de privacidade e tratamento de dados.
+- Consentimento obrigatório nos quatro formulários públicos.
+- Link "Privacidade e dados" no rodapé.
+- Rodapé identifica a versão oficial 1.0.
+- Mantém todas as funções e proteções da V18.
 
-Arquivos para substituir:
+IMPORTANTE:
+- A V19 NÃO apaga dados automaticamente.
+- Antes da divulgação pública, revise e remova apenas os dados de teste que você realmente deseja excluir.
+- Faça um backup antes de qualquer limpeza.
+
+Arquivos para substituir no GitHub:
 app.js
 index.html
 styles.css
 sw.js
 LEIA-ME.txt
 
-Abrir depois:
-nomadhorse.com.br/nomad-horse-market/?v=18
+Depois abra:
+nomadhorse.com.br/nomad-horse-market/?v=19
 
-Teste:
-1. Painel: confirmar que "Criar acesso inicial" não aparece.
-2. Entrar normalmente.
-3. Ver "Segurança e backup".
-4. Tocar em "EXPORTAR BACKUP AGORA".
-5. Conferir se "Último backup" passa a mostrar data e hora.
+Validação final:
+1. Painel > Status de lançamento.
+2. Confirmar os itens do checklist.
+3. Conferir aviso de privacidade em um formulário público.
+4. Revisar dados de teste.
+5. Após limpeza aprovada, considerar a versão 1.0 liberada para divulgação.

@@ -25,6 +25,41 @@ function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function setResult(form,text,type='success'){ const box=form.querySelector('.form-result'); if(!box)return; box.className='full form-result notice '+type; box.textContent=text; setTimeout(()=>box.classList.add('hidden'),8000); }
 function toggleBusy(form,busy){ const btn=form.querySelector('button[type="submit"]'); if(btn){ btn.disabled=busy; btn.dataset.old=btn.dataset.old||btn.textContent; btn.textContent=busy?'Enviando...':btn.dataset.old; } }
 
+
+function openPrivacyNotice(){
+  $('#privacyNotice')?.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+function closePrivacyNotice(){
+  $('#privacyNotice')?.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
+function renderLaunchChecklist(leads,listings,deals){
+  const activeListings=listings.filter(x=>x.status==='active').length;
+  const testLeads=leads.filter(x=>/^teste\b/i.test(String(x.name||'').trim()));
+  const hasBackup=!!localStorage.getItem('nhm_last_backup_at');
+  const checks=[
+    {ok:true,title:'Segurança do painel',detail:'Acesso administrativo protegido e RLS ativo.'},
+    {ok:activeListings>0,title:'Marketplace público',detail:activeListings>0?`${activeListings} anúncio(s) ativo(s) para compradores.`:'Nenhum anúncio ativo.'},
+    {ok:true,title:'CRM e histórico',detail:'Leads, negociação, retornos e histórico operacional.'},
+    {ok:true,title:'Resultados e metas',detail:'Indicadores, comissão, metas e projeções disponíveis.'},
+    {ok:hasBackup,title:'Backup recente',detail:hasBackup?`Último backup: ${formatSecurityDate(localStorage.getItem('nhm_last_backup_at'))}`:'Faça um backup antes do lançamento.'},
+    {ok:testLeads.length===0,title:'Dados de teste',detail:testLeads.length===0?'Nenhum lead com nome de teste detectado.':`${testLeads.length} lead(s) de teste ainda precisa(m) ser revisado(s) antes da divulgação.`}
+  ];
+  const ready=checks.every(x=>x.ok);
+  const wrap=$('#launchChecklist');
+  if(!wrap) return;
+  wrap.innerHTML=`
+    <div class="launch-status ${ready?'launch-ready':'launch-review'}">
+      <strong>${ready?'✅ Sistema pronto para lançamento':'⚠️ Revisão final necessária'}</strong>
+      <span>${ready?'A versão 1.0 está pronta para uso real.':'Conclua os itens destacados antes de divulgar o Market.'}</span>
+    </div>
+    <div class="launch-items">
+      ${checks.map(x=>`<div class="launch-item ${x.ok?'ok':'warn'}"><span>${x.ok?'✅':'⚠️'}</span><div><strong>${esc(x.title)}</strong><small>${esc(x.detail)}</small></div></div>`).join('')}
+    </div>`;
+}
+
 async function showView(name){
   currentView=name;
   $$('.view').forEach(v=>v.classList.add('hidden'));
@@ -1129,6 +1164,7 @@ async function loadAdmin(){
   $('#sSell').textContent=leads.filter(x=>x.lead_type==='venda').length;
   $('#sService').textContent=leads.filter(x=>['fabricacao','servico'].includes(x.lead_type)).length;
   $('#sDeals').textContent=deals.length;
+  renderLaunchChecklist(leads,listings,deals);
   $('#pendingListings').innerHTML=listings.filter(x=>x.status==='pending').map(x=>`
     <div class="pending-card"><strong>${esc(x.title)}</strong> — ${esc(x.city||'')} — ${money(x.price)}
       <div class="btn-row"><button class="btn" onclick="approveListing('${x.id}')">Aprovar</button><button class="btn red" onclick="rejectListing('${x.id}')">Rejeitar</button><button class="btn ghost" onclick="openListingEditor('${x.id}')">Editar antes</button></div>
@@ -1229,6 +1265,7 @@ async function exportData(){
   setTimeout(()=>URL.revokeObjectURL(el.href),1000);
   localStorage.setItem('nhm_last_backup_at',generatedAt);
   updateSecurityPanel();
+  if(currentView==='admin') await loadAdmin();
 }
 
 $$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
