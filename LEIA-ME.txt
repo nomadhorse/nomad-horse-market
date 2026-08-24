@@ -1,12 +1,14 @@
-NOMAD HORSE MARKET — V14 RESULTADOS COMERCIAIS
+NOMAD HORSE MARKET — V15 METAS E PROJEÇÃO
 
 Novidades:
-- Novo painel Resultados comerciais dentro do Painel Nomad Horse.
-- Mostra negócios fechados, valor fechado, comissão gerada, ticket médio, taxa de fechamento e pipeline aberto.
-- Filtros: Total, Este mês e Últimos 30 dias.
-- Lista de fechamentos com cliente, projeto, valor, comissão e data.
-- O banco agora registra a data real do fechamento (closed_at).
-- Mantém todas as funções da V13.
+- Novo painel "Metas e projeção" dentro do Painel Nomad Horse.
+- Permite definir e salvar a meta mensal de vendas.
+- Permite definir e salvar a meta mensal de comissão.
+- Mostra valor atingido, percentual da meta e quanto falta.
+- Calcula projeção de vendas e de comissão até o fim do mês.
+- As metas ficam salvas no Supabase por mês.
+- O backup agora inclui também as metas comerciais.
+- Mantém todas as funções da V14.
 
 Arquivos para substituir no GitHub:
 app.js
@@ -15,4 +17,5 @@ styles.css
 sw.js
 LEIA-ME.txt
 
-Depois abra: nomadhorse.com.br/nomad-horse-market/?v=14
+Depois abra:
+nomadhorse.com.br/nomad-horse-market/?v=15

@@ -334,6 +334,93 @@ function renderCommercialResults(deals,leads,listingMap){
   }).join('')}`:'<div class="panel muted results-empty">Nenhum fechamento neste período.</div>';
 }
 
+
+function monthStartKey(date=new Date()){
+  const y=date.getFullYear(), m=String(date.getMonth()+1).padStart(2,'0');
+  return `${y}-${m}-01`;
+}
+function sameLocalMonth(date,now=new Date()){
+  return date && date.getFullYear()===now.getFullYear() && date.getMonth()===now.getMonth();
+}
+function monthlyGoalPercent(value,target){
+  return Number(target||0)>0 ? Number(value||0)/Number(target)*100 : 0;
+}
+function monthlyGoalStatus(projection,target){
+  if(!Number(target||0)) return 'Defina uma meta para acompanhar o ritmo';
+  if(Number(projection||0)>=Number(target||0)) return 'Ritmo atual indica meta alcançável';
+  return `Projeção abaixo da meta em ${financeCurrency(Number(target)-Number(projection||0))}`;
+}
+function renderMonthlyGoals(deals,goal){
+  const now=new Date();
+  const monthDeals=deals.filter(x=>x.stage==='fechado' && sameLocalMonth(dealClosedDate(x),now));
+  const sales=monthDeals.reduce((sum,x)=>sum+Number(x.agreed_price||0),0);
+  const commission=monthDeals.reduce((sum,x)=>sum+Number(x.commission_amount||0),0);
+  const salesTarget=Number(goal?.sales_target||0);
+  const commissionTarget=Number(goal?.commission_target||0);
+  const salesPct=monthlyGoalPercent(sales,salesTarget);
+  const commissionPct=monthlyGoalPercent(commission,commissionTarget);
+  const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const elapsed=Math.max(1,now.getDate());
+  const projectedSales=sales/elapsed*daysInMonth;
+  const projectedCommission=commission/elapsed*daysInMonth;
+  const salesRemaining=Math.max(0,salesTarget-sales);
+  const commissionRemaining=Math.max(0,commissionTarget-commission);
+  const box=$('#monthlyGoals');
+  if(box) box.innerHTML=`
+    <div class="goal-card">
+      <div class="goal-card-head"><span>Meta de vendas</span><strong>${salesTarget?financeCurrency(salesTarget):'Não definida'}</strong></div>
+      <div class="goal-progress"><i style="width:${Math.min(100,Math.max(0,salesPct))}%"></i></div>
+      <div class="goal-line"><span>Atingido</span><strong>${financeCurrency(sales)}${salesTarget?` • ${salesPct.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:''}</strong></div>
+      <div class="goal-line muted-goal"><span>Falta</span><strong>${salesTarget?financeCurrency(salesRemaining):'—'}</strong></div>
+    </div>
+    <div class="goal-card">
+      <div class="goal-card-head"><span>Meta de comissão</span><strong>${commissionTarget?financeCurrency(commissionTarget):'Não definida'}</strong></div>
+      <div class="goal-progress"><i style="width:${Math.min(100,Math.max(0,commissionPct))}%"></i></div>
+      <div class="goal-line"><span>Atingido</span><strong>${financeCurrency(commission)}${commissionTarget?` • ${commissionPct.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:''}</strong></div>
+      <div class="goal-line muted-goal"><span>Falta</span><strong>${commissionTarget?financeCurrency(commissionRemaining):'—'}</strong></div>
+    </div>
+    <div class="projection-card">
+      <div><span>Projeção de vendas no mês</span><strong>${financeCurrency(projectedSales)}</strong><small>${monthlyGoalStatus(projectedSales,salesTarget)}</small></div>
+      <div><span>Projeção de comissão no mês</span><strong>${financeCurrency(projectedCommission)}</strong><small>${monthlyGoalStatus(projectedCommission,commissionTarget)}</small></div>
+      <p>Projeção baseada no resultado acumulado até o dia ${elapsed} de ${daysInMonth}.</p>
+    </div>`;
+  const form=$('#monthlyGoalForm');
+  if(form){
+    form.elements.sales_target.value=salesTarget||'';
+    form.elements.commission_target.value=commissionTarget||'';
+  }
+  const label=$('#goalMonthLabel');
+  if(label) label.textContent=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+}
+async function saveMonthlyGoals(form){
+  const btn=form.querySelector('button[type="submit"]');
+  const old=btn.textContent;
+  btn.disabled=true; btn.textContent='SALVANDO...';
+  const sales=Math.max(0,Number(form.elements.sales_target.value||0));
+  const commission=Math.max(0,Number(form.elements.commission_target.value||0));
+  const payload={
+    month_start:monthStartKey(),
+    sales_target:sales,
+    commission_target:commission,
+    updated_at:new Date().toISOString()
+  };
+  const {error}=await sb.from('commercial_goals').upsert(payload,{onConflict:'month_start'});
+  btn.disabled=false; btn.textContent=old;
+  if(error){
+    const box=form.querySelector('.form-result');
+    box.className='form-result notice error';
+    box.textContent='Não foi possível salvar as metas.';
+    return;
+  }
+  await loadAdmin();
+  const box=$('#monthlyGoalForm .form-result');
+  if(box){
+    box.className='form-result notice success';
+    box.textContent='Metas do mês salvas com sucesso.';
+    setTimeout(()=>box.classList.add('hidden'),6000);
+  }
+}
+
 function localDateTimeValue(iso){
   if(!iso) return '';
   const d=new Date(iso);
@@ -764,13 +851,15 @@ async function saveDeal(form){
 }
 
 async function loadAdmin(){
-  const [lr,lisr,dr]=await Promise.all([
+  const goalMonth=monthStartKey();
+  const [lr,lisr,dr,gr]=await Promise.all([
     sb.from('leads').select('*').order('created_at',{ascending:false}),
     sb.from('listings').select('*').order('created_at',{ascending:false}),
-    sb.from('deals').select('*').order('created_at',{ascending:false})
+    sb.from('deals').select('*').order('created_at',{ascending:false}),
+    sb.from('commercial_goals').select('*').eq('month_start',goalMonth).maybeSingle()
   ]);
-  if(lr.error||lisr.error||dr.error){ $('#adminError').textContent='Não foi possível carregar o painel.'; $('#adminError').classList.remove('hidden'); return; }
-  const leads=lr.data||[], listings=lisr.data||[], deals=dr.data||[];
+  if(lr.error||lisr.error||dr.error||gr.error){ $('#adminError').textContent='Não foi possível carregar o painel.'; $('#adminError').classList.remove('hidden'); return; }
+  const leads=lr.data||[], listings=lisr.data||[], deals=dr.data||[], monthlyGoal=gr.data||null;
   $('#sLeads').textContent=leads.length;
   $('#sBuy').textContent=leads.filter(x=>['compra','interesse_anuncio'].includes(x.lead_type)).length;
   $('#sSell').textContent=leads.filter(x=>x.lead_type==='venda').length;
@@ -804,6 +893,7 @@ async function loadAdmin(){
   const dealByLead=new Map();
   deals.forEach(d=>{ if(d.buyer_lead_id)dealByLead.set(d.buyer_lead_id,d); if(d.seller_lead_id)dealByLead.set(d.seller_lead_id,d); });
   renderCommercialResults(deals,leads,listingMap);
+  renderMonthlyGoals(deals,monthlyGoal);
   renderPriorityCenter(leads,deals,listingMap,dealByLead);
   renderSalesFunnel(leads,deals);
   renderFollowUps(leads);
@@ -850,8 +940,8 @@ async function approveListing(id){ await setListingStatus(id,'active'); }
 async function rejectListing(id){ if(confirm('Rejeitar este anúncio?')) await setListingStatus(id,'rejected'); }
 async function updateLeadStatus(id,status){ const {error}=await sb.from('leads').update({status}).eq('id',id); if(error)alert('Não foi possível atualizar o status.'); }
 async function exportData(){
-  const [l,a,d,h]=await Promise.all([sb.from('leads').select('*'),sb.from('listings').select('*'),sb.from('deals').select('*'),sb.from('client_history').select('*').order('created_at',{ascending:false})]);
-  const blob=new Blob([JSON.stringify({leads:l.data||[],listings:a.data||[],deals:d.data||[],client_history:h.data||[]},null,2)],{type:'application/json'});
+  const [l,a,d,h,g]=await Promise.all([sb.from('leads').select('*'),sb.from('listings').select('*'),sb.from('deals').select('*'),sb.from('client_history').select('*').order('created_at',{ascending:false}),sb.from('commercial_goals').select('*').order('month_start',{ascending:false})]);
+  const blob=new Blob([JSON.stringify({leads:l.data||[],listings:a.data||[],deals:d.data||[],client_history:h.data||[],commercial_goals:g.data||[]},null,2)],{type:'application/json'});
   const el=document.createElement('a'); el.href=URL.createObjectURL(blob); el.download='nomad-horse-market-backup.json'; el.click(); URL.revokeObjectURL(el.href);
 }
 

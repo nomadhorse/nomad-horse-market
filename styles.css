@@ -87,3 +87,36 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoratio
 .commercial-results{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}.result-card{background:linear-gradient(145deg,#151515,#0c0c0c);border:1px solid #2e2e2e;border-radius:14px;padding:13px;min-height:96px}.result-card span{display:block;color:#aaa;font-size:11px;margin-bottom:7px}.result-card strong{display:block;color:var(--gold);font-size:24px;line-height:1.15}.result-card small{display:block;color:#777;font-size:10px;margin-top:7px}.result-card.pipeline{border-color:#38485a}.result-card.pipeline strong{color:#d5dce5}
 .closed-deals-list{margin-bottom:22px}.closed-deals-title{display:flex;justify-content:space-between;align-items:center;padding:4px 2px 8px;color:#ddd}.closed-deals-title span{font-size:11px;color:#888}.closed-deal-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;background:#101010;border:1px solid #292929;border-radius:13px;padding:12px;margin-bottom:7px}.closed-deal-main{min-width:0}.closed-deal-main strong,.closed-deal-main span,.closed-deal-main small{display:block}.closed-deal-main strong{font-size:14px}.closed-deal-main span{font-size:12px;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}.closed-deal-main small{font-size:10px;color:#777;margin-top:4px}.closed-deal-values{display:flex;gap:14px}.closed-deal-values span{font-size:10px;color:#888}.closed-deal-values strong{display:block;color:var(--gold);font-size:13px;margin-top:2px}.results-empty{margin-bottom:18px}
 @media(max-width:760px){.commercial-results{grid-template-columns:1fr 1fr}.result-card{min-height:92px}.result-card strong{font-size:20px}.closed-deal-row{grid-template-columns:1fr auto}.closed-deal-values{grid-column:1/-1;justify-content:space-between;border-top:1px solid #242424;padding-top:9px}.closed-deal-row>.btn{grid-column:2;grid-row:1}}
+
+
+/* V15 — Metas comerciais e projeção */
+.goals-heading{margin-top:24px}
+.monthly-goals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.goal-card,.projection-card{background:linear-gradient(145deg,#151515,#0c0c0c);border:1px solid #2d2d2d;border-radius:15px;padding:14px}
+.goal-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:11px}
+.goal-card-head span{color:#aaa;font-size:12px}
+.goal-card-head strong{color:var(--gold);font-size:18px;text-align:right}
+.goal-progress{height:8px;background:#252525;border-radius:999px;overflow:hidden;margin:8px 0 12px}
+.goal-progress i{display:block;height:100%;background:linear-gradient(90deg,#8d6a2d,var(--gold));border-radius:inherit}
+.goal-line{display:flex;justify-content:space-between;gap:10px;padding-top:7px;font-size:12px;color:#aaa}
+.goal-line strong{color:#eee;text-align:right}
+.goal-line.muted-goal strong{color:#999}
+.projection-card{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;border-color:#3b3426}
+.projection-card>div{background:#111;border:1px solid #282828;border-radius:12px;padding:12px}
+.projection-card span,.projection-card strong,.projection-card small{display:block}
+.projection-card span{font-size:11px;color:#999}
+.projection-card strong{font-size:21px;color:var(--gold);margin:5px 0}
+.projection-card small{font-size:10px;color:#aaa;line-height:1.35}
+.projection-card p{grid-column:1/-1;color:#777;font-size:10px;margin:0}
+.goal-form{margin:0 0 24px}
+.goal-form-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.goal-form-title span{font-size:11px;color:var(--gold);text-transform:capitalize}
+.goal-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.goal-form label{display:block;color:#aaa;font-size:11px;margin:0 0 6px}
+.goal-form .form-result{margin-top:10px}
+@media(max-width:760px){
+  .monthly-goals{grid-template-columns:1fr}
+  .projection-card{grid-column:auto;grid-template-columns:1fr}
+  .projection-card p{grid-column:auto}
+  .goal-form-grid{grid-template-columns:1fr}
+}
