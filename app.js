@@ -100,7 +100,7 @@ function closeInstallHelp(){
   document.body.classList.remove('modal-open');
 }
 async function installNomadHorseApp(){
-  if(isStandaloneApp()){ updateInstallUI(); return; }
+if(isStandaloneApp()){ closeInstallHelp(); updateInstallUI(); alert('✅ O Nomad Horse Market já está instalado neste aparelho.'); return; }
   if(deferredPrompt){
     deferredPrompt.prompt();
     const choice=await deferredPrompt.userChoice;
