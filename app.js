@@ -6,6 +6,8 @@ const $ = (q, el=document) => el.querySelector(q);
 const $$ = (q, el=document) => [...el.querySelectorAll(q)];
 let currentView='home';
 let currentInterestListingId=null;
+let publicListingsCache=[];
+
 let deferredPrompt=null;
 let currentLeadId=null;
 let currentLeadPhone='';
@@ -36,32 +38,113 @@ async function showView(name){
 async function renderListings(){
   const wrap=$('#listingGrid'); if(!wrap)return;
   wrap.innerHTML='<div class="loader">Carregando anúncios...</div>';
-  let q=sb.from('listings').select('id,vehicle_type,title,description,price,year,city,state,tag,featured,image_url,created_at').eq('status','active').order('featured',{ascending:false}).order('created_at',{ascending:false});
+
+  const {data,error}=await sb.from('listings')
+    .select('id,vehicle_type,title,description,price,year,city,state,tag,featured,image_url,created_at')
+    .eq('status','active')
+    .order('featured',{ascending:false})
+    .order('created_at',{ascending:false});
+
+  if(error){
+    wrap.innerHTML='<div class="notice error">Não foi possível carregar os anúncios agora.</div>';
+    return;
+  }
+
+  publicListingsCache=data||[];
+  const search=($('#filterSearch')?.value||'').trim().toLowerCase();
   const type=$('#filterType')?.value||'';
-  const city=($('#filterCity')?.value||'').trim();
+  const city=($('#filterCity')?.value||'').trim().toLowerCase();
   const max=Number($('#filterPrice')?.value||0);
-  if(type) q=q.eq('vehicle_type',type);
-  if(city) q=q.ilike('city',`%${city}%`);
-  if(max) q=q.lte('price',max);
-  const {data,error}=await q;
-  if(error){ wrap.innerHTML='<div class="notice error">Não foi possível carregar os anúncios agora.</div>'; return; }
-  wrap.innerHTML=(data||[]).map(x=>`
-    <article class="listing">
-      <div class="listing-photo">${x.image_url ? `<img src="${esc(x.image_url)}" alt="${esc(x.title)}" loading="lazy">` : esc((x.vehicle_type||'ANÚNCIO').toUpperCase())}</div>
+  const sort=$('#filterSort')?.value||'featured';
+
+  let rows=publicListingsCache.filter(x=>{
+    if(type && x.vehicle_type!==type) return false;
+    if(city && !(x.city||'').toLowerCase().includes(city)) return false;
+    if(max && Number(x.price||0)>max) return false;
+    if(search){
+      const hay=[x.title,x.description,x.city,x.state,x.vehicle_type,x.tag].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const byDate=(a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0);
+  if(sort==='price_asc') rows.sort((a,b)=>(Number(a.price||Infinity)-Number(b.price||Infinity))||byDate(a,b));
+  else if(sort==='price_desc') rows.sort((a,b)=>(Number(b.price||0)-Number(a.price||0))||byDate(a,b));
+  else if(sort==='year_desc') rows.sort((a,b)=>(Number(b.year||0)-Number(a.year||0))||byDate(a,b));
+  else if(sort==='recent') rows.sort(byDate);
+  else rows.sort((a,b)=>(Number(b.featured||0)-Number(a.featured||0))||byDate(a,b));
+
+  const count=$('#marketCount'), countLabel=$('#marketCountLabel');
+  if(count) count.textContent=rows.length;
+  if(countLabel) countLabel.textContent=rows.length===1?'anúncio encontrado':'anúncios encontrados';
+
+  wrap.innerHTML=rows.map(x=>{
+    const desc=(x.description||'').trim();
+    const descShort=desc.length>105?desc.slice(0,102).trim()+'…':desc;
+    const location=[x.city,x.state].filter(Boolean).join(' - ');
+    return `
+    <article class="listing listing-v17">
+      <button class="listing-photo listing-photo-button" type="button" onclick="openListingDetails('${x.id}')" aria-label="Ver detalhes de ${esc(x.title)}">
+        ${x.image_url ? `<img src="${esc(x.image_url)}" alt="${esc(x.title)}" loading="lazy">` : `<span>${esc((x.vehicle_type||'ANÚNCIO').toUpperCase())}</span>`}
+        ${x.featured?'<span class="listing-featured">★ DESTAQUE</span>':''}
+      </button>
       <div class="listing-body">
-        <span class="badge">${esc(x.tag||x.vehicle_type)}</span>
+        <div class="listing-badges"><span class="badge">${esc(x.tag||x.vehicle_type)}</span>${x.featured?'<span class="badge badge-featured">Selecionado</span>':''}</div>
         <h3>${esc(x.title)}</h3>
-        <div class="muted">${x.year||''}${x.year&&x.city?' • ':''}${esc(x.city||'')}${x.state?' - '+esc(x.state):''}</div>
+        <div class="listing-meta">${x.year?`<span>📅 ${esc(String(x.year))}</span>`:''}${location?`<span>📍 ${esc(location)}</span>`:''}</div>
+        ${descShort?`<p class="listing-description">${esc(descShort)}</p>`:''}
         <div class="price">${money(x.price)}</div>
-        <div class="btn-row">
+        <div class="btn-row listing-actions">
           <button class="btn" onclick="interest('${x.id}','${encodeURIComponent(x.title)}','${encodeURIComponent(x.vehicle_type||'')}')">Tenho interesse</button>
-          <button class="btn ghost" onclick="shareListing('${x.id}','${encodeURIComponent(x.title)}',${Number(x.price||0)})">Compartilhar</button>
+          <button class="btn ghost" onclick="openListingDetails('${x.id}')">Ver detalhes</button>
+          <button class="btn ghost share-compact" onclick="shareListing('${x.id}','${encodeURIComponent(x.title)}',${Number(x.price||0)})" aria-label="Compartilhar">↗</button>
         </div>
       </div>
-    </article>`).join('') || '<div class="notice">Nenhum anúncio encontrado com esses filtros.</div>';
+    </article>`;
+  }).join('') || '<div class="notice market-empty"><strong>Nenhum anúncio encontrado.</strong><br>Experimente remover algum filtro ou aumentar o preço máximo.</div>';
 }
 
-function interest(id,title,vehicleType){
+function clearMarketFilters(){
+  const ids=['filterSearch','filterType','filterCity','filterPrice'];
+  ids.forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+  if($('#filterSort')) $('#filterSort').value='featured';
+  renderListings();
+}
+
+function publicListingById(id){ return publicListingsCache.find(x=>String(x.id)===String(id))||null; }
+
+function openListingDetails(id){
+  const x=publicListingById(id);
+  if(!x) return;
+  const modal=$('#listingDetails');
+  if(!modal) return;
+  $('#listingDetailsBadge').textContent=x.tag||x.vehicle_type||'Anúncio';
+  $('#listingDetailsTitle').textContent=x.title||'Detalhes do anúncio';
+  $('#listingDetailsPhoto').innerHTML=x.image_url
+    ? `<img src="${esc(x.image_url)}" alt="${esc(x.title)}">`
+    : `<span>${esc((x.vehicle_type||'ANÚNCIO').toUpperCase())}</span>`;
+  const location=[x.city,x.state].filter(Boolean).join(' - ');
+  $('#listingDetailsMeta').innerHTML=`
+    <div><span>Tipo</span><strong>${esc(x.vehicle_type||'—')}</strong></div>
+    <div><span>Ano</span><strong>${x.year?esc(String(x.year)):'—'}</strong></div>
+    <div><span>Localização</span><strong>${esc(location||'—')}</strong></div>
+    <div><span>Valor</span><strong>${money(x.price)}</strong></div>`;
+  $('#listingDetailsDescription').innerHTML=x.description
+    ? `<h4>Sobre este anúncio</h4><p>${esc(x.description)}</p>`
+    : '<h4>Sobre este anúncio</h4><p class="muted">Solicite mais informações à Nomad Horse.</p>';
+  const interestBtn=$('#listingDetailsInterest'), shareBtn=$('#listingDetailsShare');
+  if(interestBtn) interestBtn.onclick=()=>{ closeListingDetails(); interest(x.id,encodeURIComponent(x.title),encodeURIComponent(x.vehicle_type||'')); };
+  if(shareBtn) shareBtn.onclick=()=>shareListing(x.id,encodeURIComponent(x.title),Number(x.price||0));
+  modal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+function closeListingDetails(){
+  $('#listingDetails')?.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
+function interestfunction interest(id,title,vehicleType){
   currentInterestListingId=id;
   showView('buy');
   const selectedType=decodeURIComponent(vehicleType||'');
@@ -74,9 +157,11 @@ function interest(id,title,vehicleType){
   $('#buyMessage').value='Tenho interesse neste anúncio e gostaria de receber mais informações.';
 }
 function shareListing(id,title,price){
-  const text=`Nomad Horse Market — ${decodeURIComponent(title||'Anúncio')} — ${money(price)}`;
-  if(navigator.share) navigator.share({title:'Nomad Horse Market',text,url:location.href});
-  else navigator.clipboard?.writeText(text+' '+location.href).then(()=>alert('Anúncio copiado.'));
+  const decoded=decodeURIComponent(title||'Anúncio');
+  const text=`Nomad Horse Market — ${decoded} — ${money(price)}`;
+  const url=`${location.origin}${location.pathname}?anuncio=${encodeURIComponent(id)}#comprar`;
+  if(navigator.share) navigator.share({title:decoded,text,url});
+  else navigator.clipboard?.writeText(text+' '+url).then(()=>alert('Link do anúncio copiado.'));
 }
 
 async function submitBuy(form){
@@ -1063,7 +1148,11 @@ async function exportData(){
 
 $$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 $('.menu-toggle')?.addEventListener('click',()=>{ const nav=$('.nav'); const open=nav.classList.toggle('open'); $('.menu-toggle').setAttribute('aria-expanded',open?'true':'false'); });
-$('#filterType')?.addEventListener('change',renderListings); $('#filterCity')?.addEventListener('input',renderListings); $('#filterPrice')?.addEventListener('input',renderListings);
+$('#filterType')?.addEventListener('change',renderListings);
+$('#filterCity')?.addEventListener('input',renderListings);
+$('#filterPrice')?.addEventListener('input',renderListings);
+$('#filterSearch')?.addEventListener('input',renderListings);
+$('#filterSort')?.addEventListener('change',renderListings);
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; if(currentView==='home'&&localStorage.getItem('nhm_install_dismissed')!=='1')$('#installPrompt')?.classList.remove('hidden'); });
 $('#installBtn')?.addEventListener('click',async()=>{ if(!deferredPrompt)return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('#installPrompt')?.classList.add('hidden'); });
 $('#installClose')?.addEventListener('click',()=>{ localStorage.setItem('nhm_install_dismissed','1'); $('#installPrompt')?.classList.add('hidden'); });
