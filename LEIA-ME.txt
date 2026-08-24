@@ -1,10 +1,12 @@
-NOMAD HORSE MARKET — V13 HISTÓRICO DO CLIENTE
+NOMAD HORSE MARKET — V14 RESULTADOS COMERCIAIS
 
 Novidades:
-- Linha do tempo automática dentro da ficha do cliente.
-- Registra lead recebido, mudanças de status, contatos, retornos agendados/reagendados/concluídos, negociação, proposta, valores e comissão.
-- Histórico fica salvo no Supabase e entra no Exportar backup.
-- Mantém todas as funções da V12.1.
+- Novo painel Resultados comerciais dentro do Painel Nomad Horse.
+- Mostra negócios fechados, valor fechado, comissão gerada, ticket médio, taxa de fechamento e pipeline aberto.
+- Filtros: Total, Este mês e Últimos 30 dias.
+- Lista de fechamentos com cliente, projeto, valor, comissão e data.
+- O banco agora registra a data real do fechamento (closed_at).
+- Mantém todas as funções da V13.
 
 Arquivos para substituir no GitHub:
 app.js
@@ -13,4 +15,4 @@ styles.css
 sw.js
 LEIA-ME.txt
 
-Depois abra: nomadhorse.com.br/nomad-horse-market/?v=13
+Depois abra: nomadhorse.com.br/nomad-horse-market/?v=14

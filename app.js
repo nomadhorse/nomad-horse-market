@@ -13,6 +13,7 @@ let currentLeadDealId=null;
 let leadFilter='all';
 let followUpFilter='all';
 let priorityFilter='all';
+let financePeriod='all';
 
 function money(v){ const n=Number(v||0); return n?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Sob consulta'; }
 function esc(v=''){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -275,6 +276,62 @@ function renderSalesFunnel(leads,deals){
     <div><span>Comissão gerada</span><strong>${commissions?money(commissions):'R$ 0,00'}</strong></div>`;
   const clear=$('#funnelClear');
   if(clear) clear.classList.toggle('hidden',leadFilter==='all');
+}
+
+function financeCurrency(v){
+  return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function financePeriodLabel(){
+  return ({all:'Todo o período',month:'Este mês','30d':'Últimos 30 dias'})[financePeriod]||'Todo o período';
+}
+function setFinancePeriod(value='all'){
+  financePeriod=value||'all';
+  loadAdmin();
+}
+function dealClosedDate(deal){
+  const raw=deal.closed_at||deal.updated_at||deal.created_at;
+  const d=raw?new Date(raw):null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+}
+function dealMatchesFinancePeriod(deal,now=new Date()){
+  if(financePeriod==='all') return true;
+  const d=dealClosedDate(deal); if(!d) return false;
+  if(financePeriod==='month') return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  if(financePeriod==='30d') return d >= new Date(now.getTime()-30*24*60*60*1000) && d <= now;
+  return true;
+}
+function renderCommercialResults(deals,leads,listingMap){
+  const leadMap=new Map(leads.map(x=>[x.id,x]));
+  const closed=deals.filter(x=>x.stage==='fechado' && dealMatchesFinancePeriod(x));
+  const cancelled=deals.filter(x=>x.stage==='cancelado' && dealMatchesFinancePeriod(x));
+  const finalCount=closed.length+cancelled.length;
+  const closedValue=closed.reduce((sum,x)=>sum+Number(x.agreed_price||0),0);
+  const commissions=closed.reduce((sum,x)=>sum+Number(x.commission_amount||0),0);
+  const avgTicket=closed.length?closedValue/closed.length:0;
+  const closeRate=finalCount?closed.length/finalCount*100:0;
+  const openDeals=deals.filter(x=>!['fechado','cancelado'].includes(x.stage));
+  const pipeline=openDeals.reduce((sum,x)=>sum+Number(x.offered_price||x.asking_price||0),0);
+  const box=$('#commercialResults');
+  if(box) box.innerHTML=`
+    <div class="result-card"><span>Negócios fechados</span><strong>${closed.length}</strong><small>${esc(financePeriodLabel())}</small></div>
+    <div class="result-card money"><span>Valor fechado</span><strong>${financeCurrency(closedValue)}</strong><small>Volume negociado</small></div>
+    <div class="result-card money"><span>Comissão gerada</span><strong>${financeCurrency(commissions)}</strong><small>Receita de comissão</small></div>
+    <div class="result-card money"><span>Ticket médio</span><strong>${financeCurrency(avgTicket)}</strong><small>Por negócio fechado</small></div>
+    <div class="result-card"><span>Taxa de fechamento</span><strong>${closeRate.toLocaleString('pt-BR',{maximumFractionDigits:1})}%</strong><small>Fechados ÷ decisões finais</small></div>
+    <div class="result-card money pipeline"><span>Pipeline aberto</span><strong>${financeCurrency(pipeline)}</strong><small>${openDeals.length} negociação${openDeals.length===1?'':'ões'} em aberto</small></div>`;
+  $$('#resultsPeriod [data-finance-period]').forEach(b=>b.classList.toggle('active',b.dataset.financePeriod===financePeriod));
+  const list=$('#closedDealsList'); if(!list)return;
+  const rows=[...closed].sort((a,b)=>(dealClosedDate(b)?.getTime()||0)-(dealClosedDate(a)?.getTime()||0));
+  list.innerHTML=rows.length?`<div class="closed-deals-title"><strong>Fechamentos</strong><span>${rows.length} registro${rows.length===1?'':'s'}</span></div>${rows.map(x=>{
+    const lead=leadMap.get(x.buyer_lead_id)||leadMap.get(x.seller_lead_id);
+    const listing=listingMap.get(x.listing_id);
+    const d=dealClosedDate(x);
+    return `<article class="closed-deal-row">
+      <div class="closed-deal-main"><strong>${esc(lead?.name||'Cliente')}</strong><span>${esc(listing?.title||'Negociação')}</span><small>${d?d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</small></div>
+      <div class="closed-deal-values"><span>Fechado <strong>${financeCurrency(x.agreed_price)}</strong></span><span>Comissão <strong>${financeCurrency(x.commission_amount)}</strong></span></div>
+      ${lead?`<button class="btn ghost small" onclick="openLeadEditor('${lead.id}')">Abrir</button>`:''}
+    </article>`;
+  }).join('')}`:'<div class="panel muted results-empty">Nenhum fechamento neste período.</div>';
 }
 
 function localDateTimeValue(iso){
@@ -746,6 +803,7 @@ async function loadAdmin(){
   const leadMap=new Map(leads.map(x=>[x.id,x]));
   const dealByLead=new Map();
   deals.forEach(d=>{ if(d.buyer_lead_id)dealByLead.set(d.buyer_lead_id,d); if(d.seller_lead_id)dealByLead.set(d.seller_lead_id,d); });
+  renderCommercialResults(deals,leads,listingMap);
   renderPriorityCenter(leads,deals,listingMap,dealByLead);
   renderSalesFunnel(leads,deals);
   renderFollowUps(leads);
