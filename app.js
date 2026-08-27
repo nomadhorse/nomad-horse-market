@@ -137,7 +137,7 @@ updateInstallUI();
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=20',{scope:'./'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=23',{scope:'./'});
       reg.update().catch(()=>{});
     }catch(e){}
   });
