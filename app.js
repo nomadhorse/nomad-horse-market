@@ -376,10 +376,87 @@ function publicSubmitMessage(error,fallback){
 
 async function adminSignIn(form){
   toggleBusy(form,true);
+
   const d=Object.fromEntries(new FormData(form).entries());
-  const {error}=await sb.auth.signInWithPassword({email:d.email,password:d.password});
+
+  const {error}=await sb.auth.signInWithPassword({
+    email:d.email,
+    password:d.password
+  });
+
+  if(error){
+    toggleBusy(form,false);
+    return setResult(form,'E-mail ou senha inválidos.','error');
+  }
+
+  const {data:aalData,error:aalError} =
+    await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if(aalError){
+    toggleBusy(form,false);
+    await sb.auth.signOut();
+    return setResult(form,'Não foi possível verificar a segurança da conta.','error');
+  }
+
+  // Se a conta já possui MFA, exige o código de 6 dígitos
+  if(
+    aalData?.nextLevel === 'aal2' &&
+    aalData?.currentLevel !== 'aal2'
+  ){
+    const {data:factors,error:factorsError} =
+      await sb.auth.mfa.listFactors();
+
+    if(factorsError){
+      toggleBusy(form,false);
+      await sb.auth.signOut();
+      return setResult(form,'Não foi possível carregar o MFA.','error');
+    }
+
+    const fator =
+      factors?.totp?.find(f => f.status === 'verified');
+
+    if(!fator){
+      toggleBusy(form,false);
+      await sb.auth.signOut();
+      return setResult(form,'MFA ativo, mas nenhum autenticador válido foi encontrado.','error');
+    }
+
+    const codigo = prompt(
+      'Digite o código de 6 dígitos do seu aplicativo autenticador:'
+    );
+
+    if(!codigo || !/^\d{6}$/.test(codigo.trim())){
+      toggleBusy(form,false);
+      await sb.auth.signOut();
+      return setResult(form,'Código MFA inválido.','error');
+    }
+
+    const {data:challenge,error:challengeError} =
+      await sb.auth.mfa.challenge({
+        factorId:fator.id
+      });
+
+    if(challengeError){
+      toggleBusy(form,false);
+      await sb.auth.signOut();
+      return setResult(form,'Não foi possível iniciar a verificação MFA.','error');
+    }
+
+    const {error:verifyError} =
+      await sb.auth.mfa.verify({
+        factorId:fator.id,
+        challengeId:challenge.id,
+        code:codigo.trim()
+      });
+
+    if(verifyError){
+      toggleBusy(form,false);
+      await sb.auth.signOut();
+      return setResult(form,'Código MFA incorreto ou expirado.','error');
+    }
+  }
+
   toggleBusy(form,false);
-  if(error) return setResult(form,'E-mail ou senha inválidos.','error');
   await renderAdminGate();
 }
 async function adminLogout(){
@@ -399,6 +476,39 @@ async function renderAdminGate(){
     login.classList.remove('hidden');
     return;
   }
+  const {data:aalData,error:aalError} =
+  await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+
+if(aalError){
+  stopAdminIdleGuard();
+  await sb.auth.signOut();
+  login.classList.remove('hidden');
+
+  if(gateMsg){
+    gateMsg.className='full form-result notice error';
+    gateMsg.textContent='Não foi possível verificar a segurança MFA. Entre novamente.';
+    gateMsg.classList.remove('hidden');
+  }
+
+  return;
+}
+
+if(
+  aalData?.nextLevel === 'aal2' &&
+  aalData?.currentLevel !== 'aal2'
+){
+  stopAdminIdleGuard();
+  await sb.auth.signOut();
+  login.classList.remove('hidden');
+
+  if(gateMsg){
+    gateMsg.className='full form-result notice error';
+    gateMsg.textContent='Sua conta usa MFA. Entre novamente e confirme o código de 6 dígitos.';
+    gateMsg.classList.remove('hidden');
+  }
+
+  return;
+}
   const {data:isAdmin,error}=await sb.rpc('is_admin');
   if(error||!isAdmin){
     stopAdminIdleGuard();
