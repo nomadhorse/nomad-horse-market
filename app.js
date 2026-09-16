@@ -1545,6 +1545,259 @@ sb.auth.onAuthStateChange((event, session) => {
     }
   }
 })();
+// =====================================================
+// NOMAD HORSE - ATIVAÇÃO MFA / TOTP
+// =====================================================
 
+window.startMfaEnrollment = async function () {
+  try {
+    const { data: userData, error: userError } = await sb.auth.getUser();
+
+    if (userError || !userData?.user) {
+      alert('Sua sessão expirou. Entre novamente no painel.');
+      return;
+    }
+
+    // Verifica se já existe MFA TOTP ativo
+    const { data: factorsData, error: factorsError } =
+      await sb.auth.mfa.listFactors();
+
+    if (factorsError) {
+      alert('Não foi possível verificar o MFA: ' + factorsError.message);
+      return;
+    }
+
+    const totpAtivo = factorsData?.totp?.find(
+      factor => factor.status === 'verified'
+    );
+
+    if (totpAtivo) {
+      alert('A autenticação em dois fatores já está ativada nesta conta.');
+      return;
+    }
+
+    // Cria o fator TOTP
+    const { data, error } = await sb.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'Nomad Horse Admin'
+    });
+
+    if (error) {
+      alert('Não foi possível iniciar o MFA: ' + error.message);
+      return;
+    }
+
+    const factorId = data.id;
+    const qrCode = data.totp.qr_code;
+    const secret = data.totp.secret;
+
+    const tela = document.createElement('div');
+    tela.id = 'nomad-mfa-setup';
+
+    tela.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: rgba(0,0,0,.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    `;
+
+    tela.innerHTML = `
+      <div style="
+        width:100%;
+        max-width:430px;
+        background:#151515;
+        border:1px solid #3d3321;
+        border-radius:22px;
+        padding:26px;
+        color:#fff;
+        font-family:Arial,sans-serif;
+        text-align:center;
+      ">
+        <div style="
+          color:#d6ad5c;
+          font-weight:800;
+          letter-spacing:2px;
+          margin-bottom:8px;
+        ">
+          NOMAD HORSE MARKET
+        </div>
+
+        <h2 style="margin:0 0 10px;">
+          Ativar autenticação em dois fatores
+        </h2>
+
+        <p style="color:#bbb;line-height:1.5;">
+          Escaneie o QR Code com Google Authenticator,
+          Microsoft Authenticator ou outro aplicativo TOTP.
+        </p>
+
+        <img
+          src="${qrCode}"
+          alt="QR Code MFA"
+          style="
+            width:220px;
+            max-width:90%;
+            background:#fff;
+            padding:10px;
+            border-radius:12px;
+            margin:10px auto;
+          "
+        >
+
+        <p style="color:#aaa;font-size:13px;">
+          Se não conseguir escanear, use esta chave:
+        </p>
+
+        <div style="
+          background:#090909;
+          border:1px solid #444;
+          border-radius:10px;
+          padding:10px;
+          word-break:break-all;
+          color:#d6ad5c;
+          font-size:13px;
+        ">
+          ${secret}
+        </div>
+
+        <input
+          id="nomadMfaCode"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="Código de 6 dígitos"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            margin-top:18px;
+            padding:14px;
+            border-radius:12px;
+            border:1px solid #555;
+            background:#090909;
+            color:#fff;
+            font-size:18px;
+            text-align:center;
+            letter-spacing:4px;
+          "
+        >
+
+        <button
+          id="nomadMfaConfirmar"
+          style="
+            width:100%;
+            margin-top:16px;
+            padding:15px;
+            border:0;
+            border-radius:12px;
+            background:#d6ad5c;
+            color:#111;
+            font-weight:800;
+            cursor:pointer;
+          "
+        >
+          CONFIRMAR E ATIVAR MFA
+        </button>
+
+        <button
+          id="nomadMfaCancelar"
+          style="
+            width:100%;
+            margin-top:10px;
+            padding:13px;
+            border:1px solid #555;
+            border-radius:12px;
+            background:transparent;
+            color:#ddd;
+            cursor:pointer;
+          "
+        >
+          CANCELAR
+        </button>
+
+        <div
+          id="nomadMfaMensagem"
+          style="margin-top:14px;line-height:1.4;"
+        ></div>
+      </div>
+    `;
+
+    document.body.appendChild(tela);
+
+    const mensagem = document.getElementById('nomadMfaMensagem');
+    const confirmar = document.getElementById('nomadMfaConfirmar');
+
+    confirmar.addEventListener('click', async () => {
+      const code =
+        document.getElementById('nomadMfaCode').value.trim();
+
+      if (!/^\d{6}$/.test(code)) {
+        mensagem.style.color = '#ff7777';
+        mensagem.textContent = 'Digite o código de 6 dígitos.';
+        return;
+      }
+
+      confirmar.disabled = true;
+      confirmar.textContent = 'VERIFICANDO...';
+
+      const { data: challenge, error: challengeError } =
+        await sb.auth.mfa.challenge({
+          factorId
+        });
+
+      if (challengeError) {
+        mensagem.style.color = '#ff7777';
+        mensagem.textContent =
+          'Erro ao criar verificação: ' + challengeError.message;
+
+        confirmar.disabled = false;
+        confirmar.textContent = 'CONFIRMAR E ATIVAR MFA';
+        return;
+      }
+
+      const { error: verifyError } =
+        await sb.auth.mfa.verify({
+          factorId,
+          challengeId: challenge.id,
+          code
+        });
+
+      if (verifyError) {
+        mensagem.style.color = '#ff7777';
+        mensagem.textContent =
+          'Código inválido ou expirado. Tente novamente.';
+
+        confirmar.disabled = false;
+        confirmar.textContent = 'CONFIRMAR E ATIVAR MFA';
+        return;
+      }
+
+      mensagem.style.color = '#7ee787';
+      mensagem.textContent =
+        'MFA ativado com sucesso nesta conta.';
+
+      setTimeout(() => {
+        tela.remove();
+      }, 1800);
+    });
+
+    document
+      .getElementById('nomadMfaCancelar')
+      .addEventListener('click', async () => {
+        try {
+          await sb.auth.mfa.unenroll({ factorId });
+        } catch (_) {}
+
+        tela.remove();
+      });
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao configurar MFA.');
+  }
+};
 
 
