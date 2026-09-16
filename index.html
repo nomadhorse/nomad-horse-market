@@ -36,7 +36,7 @@
   <div class="security-card"><span>⏱️ Sessão administrativa</span><strong>30 min</strong><small>O painel encerra a sessão após período de inatividade.</small></div>
   <div class="security-card"><span>💾 Último backup</span><strong id="lastBackupStatus">Ainda não registrado</strong><small>Faça backup antes de alterações importantes.</small></div>
 </div>
-<div class="security-actions"><button class="btn ghost" type="button" onclick="exportData()">EXPORTAR BACKUP AGORA</button></div>
+<div class="security-actions"><button class="btn ghost" type="button" onclick="exportData()">EXPORTAR BACKUP AGORA</button><button id="mfaSetupBtn" class="btn ghost" type="button" onclick="startMfaEnrollment()">ATIVAR MFA</button></div>
 <div class="admin-section-head launch-heading"><div><h3>Status de lançamento</h3><p class="muted">Revisão final da versão oficial 1.0 antes da divulgação pública.</p></div><span class="release-badge">VERSÃO 1.0</span></div>
 <div id="launchChecklist" class="launch-checklist"></div>
 
