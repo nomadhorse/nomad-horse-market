@@ -330,9 +330,40 @@ function formatSecurityDate(value){
   if(Number.isNaN(d.getTime())) return 'Ainda não registrado';
   return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
 }
-function updateSecurityPanel(){
+async function updateSecurityPanel(){
   const el=$('#lastBackupStatus');
-  if(el) el.textContent=formatSecurityDate(localStorage.getItem('nhm_last_backup_at'));
+
+  if(el){
+    el.textContent=formatSecurityDate(
+      localStorage.getItem('nhm_last_backup_at')
+    );
+  }
+
+  const mfaBtn=$('#mfaSetupBtn');
+  if(!mfaBtn) return;
+
+  try{
+    const {data,error}=await sb.auth.mfa.listFactors();
+
+    if(error) return;
+
+    const mfaAtivo=data?.totp?.some(
+      factor => factor.status === 'verified'
+    );
+
+    if(mfaAtivo){
+      mfaBtn.textContent='MFA ATIVO ✓';
+      mfaBtn.disabled=true;
+      mfaBtn.title='Autenticação em dois fatores ativada';
+    }else{
+      mfaBtn.textContent='ATIVAR MFA';
+      mfaBtn.disabled=false;
+      mfaBtn.title='';
+    }
+
+  }catch(err){
+    console.error('Erro ao verificar MFA:',err);
+  }
 }
 function markAdminActivity(){
   if(sessionStorage.getItem('nhm_admin_active')==='1'){
