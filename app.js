@@ -1354,3 +1354,197 @@ $('#filterSort')?.addEventListener('change',renderListings);
 
 
 renderListings();
+
+// =====================================================
+// NOMAD HORSE - RECUPERAÇÃO / NOVA SENHA
+// =====================================================
+
+function abrirTelaNovaSenha() {
+  if (document.getElementById('nomad-reset-password')) return;
+
+  const tela = document.createElement('div');
+  tela.id = 'nomad-reset-password';
+
+  tela.style.cssText = `
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: #080808;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  tela.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:430px;
+      background:#151515;
+      border:1px solid #3d3321;
+      border-radius:24px;
+      padding:30px;
+      color:#fff;
+      font-family:Arial,sans-serif;
+    ">
+      <div style="
+        color:#d6ad5c;
+        font-weight:800;
+        letter-spacing:2px;
+        margin-bottom:8px;
+      ">
+        NOMAD HORSE MARKET
+      </div>
+
+      <h2 style="margin:0 0 10px;">Criar nova senha</h2>
+
+      <p style="color:#bbb;line-height:1.5;">
+        Digite a nova senha da sua conta administrativa.
+      </p>
+
+      <label style="display:block;margin-top:22px;margin-bottom:8px;">
+        Nova senha
+      </label>
+
+      <input
+        id="nomadNovaSenha"
+        type="password"
+        autocomplete="new-password"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:15px;
+          border-radius:12px;
+          border:1px solid #555;
+          background:#090909;
+          color:#fff;
+          font-size:16px;
+        "
+      >
+
+      <label style="display:block;margin-top:18px;margin-bottom:8px;">
+        Confirmar nova senha
+      </label>
+
+      <input
+        id="nomadConfirmarSenha"
+        type="password"
+        autocomplete="new-password"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:15px;
+          border-radius:12px;
+          border:1px solid #555;
+          background:#090909;
+          color:#fff;
+          font-size:16px;
+        "
+      >
+
+      <button
+        id="nomadSalvarSenha"
+        style="
+          width:100%;
+          margin-top:24px;
+          padding:16px;
+          border:0;
+          border-radius:14px;
+          background:#d6ad5c;
+          color:#111;
+          font-size:16px;
+          font-weight:800;
+          cursor:pointer;
+        "
+      >
+        SALVAR NOVA SENHA
+      </button>
+
+      <div
+        id="nomadResetMensagem"
+        style="margin-top:18px;line-height:1.4;"
+      ></div>
+    </div>
+  `;
+
+  document.body.appendChild(tela);
+
+  const botao = document.getElementById('nomadSalvarSenha');
+  const mensagem = document.getElementById('nomadResetMensagem');
+
+  botao.addEventListener('click', async () => {
+    const senha = document.getElementById('nomadNovaSenha').value;
+    const confirmar = document.getElementById('nomadConfirmarSenha').value;
+
+    if (senha.length < 8) {
+      mensagem.style.color = '#ff7777';
+      mensagem.textContent =
+        'Use uma senha com pelo menos 8 caracteres.';
+      return;
+    }
+
+    if (senha !== confirmar) {
+      mensagem.style.color = '#ff7777';
+      mensagem.textContent =
+        'As duas senhas não são iguais.';
+      return;
+    }
+
+    botao.disabled = true;
+    botao.textContent = 'SALVANDO...';
+
+    const { error } = await sb.auth.updateUser({
+      password: senha
+    });
+
+    if (error) {
+      mensagem.style.color = '#ff7777';
+      mensagem.textContent =
+        'Não foi possível alterar a senha: ' + error.message;
+
+      botao.disabled = false;
+      botao.textContent = 'SALVAR NOVA SENHA';
+      return;
+    }
+
+    mensagem.style.color = '#7ee787';
+    mensagem.textContent =
+      'Senha alterada com sucesso.';
+
+    await sb.auth.signOut();
+
+    setTimeout(() => {
+      window.location.href = window.location.origin;
+    }, 1800);
+  });
+}
+
+
+// Detecta o acesso vindo do e-mail de recuperação
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    abrirTelaNovaSenha();
+  }
+});
+
+
+// Verificação adicional caso o link de recuperação
+// já tenha sido processado quando o app carregar
+(async () => {
+  const url = window.location.href;
+
+  const recuperacaoNaUrl =
+    url.includes('type=recovery') ||
+    new URLSearchParams(window.location.search).get('type') === 'recovery';
+
+  if (recuperacaoNaUrl) {
+    const { data } = await sb.auth.getSession();
+
+    if (data && data.session) {
+      abrirTelaNovaSenha();
+    }
+  }
+})();
+
+
+
