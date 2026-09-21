@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proposta — Nomad Horse Market</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#090909;
+  color:#fff;
+}
+.wrap{max-width:760px;margin:auto;padding:24px 16px 50px}
+.logo{
+  text-align:center;
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:2px;
+  color:#d6b46a;
+  margin:10px 0 5px;
+}
+.sub{text-align:center;color:#aaa;margin-bottom:25px}
+.card{
+  background:#151515;
+  border:1px solid #30291d;
+  border-radius:16px;
+  padding:22px;
+  margin-bottom:18px;
+}
+h1,h2{margin-top:0}
+h1{font-size:25px}
+h2{font-size:19px;color:#d6b46a}
+.info{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.info div{
+  background:#0e0e0e;
+  padding:14px;
+  border-radius:10px;
+}
+.label{
+  display:block;
+  color:#999;
+  font-size:12px;
+  margin-bottom:5px;
+}
+.value{font-weight:bold}
+.total{
+  font-size:30px;
+  color:#d6b46a;
+  font-weight:800;
+  text-align:center;
+  padding:15px;
+}
+input,textarea{
+  width:100%;
+  padding:13px;
+  border-radius:9px;
+  border:1px solid #444;
+  background:#0d0d0d;
+  color:#fff;
+  margin-top:6px;
+  font-size:15px;
+}
+textarea{min-height:80px;resize:vertical}
+.field{margin-bottom:13px}
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.stage{
+  border:1px solid #393226;
+  border-radius:12px;
+  padding:15px;
+  margin-bottom:12px;
+  background:#101010;
+}
+.stage-title{
+  color:#d6b46a;
+  font-weight:bold;
+  margin-bottom:10px;
+}
+.stage-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+button{
+  border:0;
+  border-radius:9px;
+  padding:13px 18px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.primary{
+  width:100%;
+  background:#d6b46a;
+  color:#111;
+  font-size:16px;
+  margin-top:10px;
+}
+.secondary{
+  background:#292929;
+  color:#fff;
+}
+.danger{
+  background:#392020;
+  color:#ffb4b4;
+}
+#addStage{
+  margin-bottom:15px;
+}
+.summary{
+  padding:15px;
+  border-radius:10px;
+  background:#0d0d0d;
+  border:1px solid #333;
+}
+.ok{color:#8fda9d}
+.error{color:#ff8d8d}
+.notice{
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
+  background:#211d14;
+  border:1px solid #6d5930;
+}
+.hidden{display:none}
+small{color:#999}
+@media(max-width:600px){
+  .info,.grid{grid-template-columns:1fr}
+  .wrap{padding:18px 12px 40px}
+  .card{padding:17px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <div class="logo">NOMAD HORSE</div>
+  <div class="sub">Market • Proposta Comercial</div>
+
+  <div id="loading" class="card">
+    Carregando proposta...
+  </div>
+
+  <div id="errorBox" class="card hidden">
+    <h2>Não foi possível carregar</h2>
+    <p id="errorText"></p>
+  </div>
+
+  <main id="content" class="hidden">
+
+    <div class="card">
+      <h1 id="projectName">Projeto</h1>
+
+      <div class="info">
+        <div>
+          <span class="label">Cliente</span>
+          <span class="value" id="clientName">—</span>
+        </div>
+
+        <div>
+          <span class="label">Tipo</span>
+          <span class="value">Trailer</span>
+        </div>
+      </div>
+
+      <div class="total" id="totalValue">R$ 0,00</div>
+
+      <div class="notice">
+        <strong>Condição comercial</strong><br>
+        <span id="adminMessage"></span>
+      </div>
+    </div>
+
+    <form id="proposalForm">
+
+      <div class="card">
+        <h2>1. Dados da empresa</h2>
+
+        <div class="field">
+          <label>Razão social *</label>
+          <input id="legalName" required>
+        </div>
+
+        <div class="field">
+          <label>Nome fantasia</label>
+          <input id="tradeName">
+        </div>
+
+        <div class="grid">
+
+          <div class="field">
+            <label>CNPJ *</label>
+            <input id="cnpj" required>
+          </div>
+
+          <div class="field">
+            <label>Inscrição estadual</label>
+            <input id="stateRegistration">
+          </div>
+
+        </div>
+
+        <div class="field">
+          <label>Endereço</label>
+          <input id="address">
+        </div>
+
+        <div class="grid">
+
+          <div class="field">
+            <label>Cidade</label>
+            <input id="city">
+          </div>
+
+          <div class="field">
+            <label>Estado</label>
+            <input id="state" maxlength="2">
+          </div>
+
+        </div>
+
+        <div class="grid">
+
+          <div class="field">
+            <label>CEP</label>
+            <input id="zip">
+          </div>
+
+          <div class="field">
+            <label>Telefone *</label>
+            <input id="phone" required>
+          </div>
+
+        </div>
+
+        <div class="field">
+          <label>E-mail *</label>
+          <input id="email" type="email" required>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <h2>2. Forma de pagamento</h2>
+
+        <p>
+          Informe abaixo como deseja organizar o pagamento do projeto.
+          Você pode dividir em etapas conforme o fluxo da empresa.
+        </p>
+
+        <div id="stages"></div>
+
+        <button type="button" class="secondary" id="addStage">
+          + Adicionar etapa
+        </button>
+
+        <div class="summary">
+          <div>
+            Total da proposta:
+            <strong id="summaryTotal">R$ 0,00</strong>
+          </div>
+
+          <div>
+            Total informado:
+            <strong id="enteredTotal">R$ 0,00</strong>
+          </div>
+
+          <div id="difference" class="error">
+            Diferença: R$ 0,00
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <h2>3. Observações</h2>
+
+        <textarea
+          id="clientMessage"
+          placeholder="Se desejar, informe alguma observação sobre a forma de pagamento ou as etapas do projeto."
+        ></textarea>
+      </div>
+
+      <div id="result" class="hidden"></div>
+
+      <button type="submit" class="primary" id="submitBtn">
+        ENVIAR PROPOSTA DE PAGAMENTO
+      </button>
+
+    </form>
+
+  </main>
+
+</div>
+
+<script>
+
+const SUPABASE_URL = 'https://ndbekzgxdfuhjlocipiv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_H0DQ1mF0BW8bTysshtTJuw_Ulglk1_Z';
+
+const sb = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const token =
+  new URLSearchParams(window.location.search).get('proposal');
+
+let proposal = null;
+
+function money(value){
+  return Number(value || 0).toLocaleString(
+    'pt-BR',
+    {style:'currency',currency:'BRL'}
+  );
+}
+
+function showError(message){
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('content').classList.add('hidden');
+  document.getElementById('errorBox').classList.remove('hidden');
+  document.getElementById('errorText').textContent = message;
+}
+
+async function loadProposal(){
+
+  if(!token){
+    showError('Link da proposta inválido.');
+    return;
+  }
+
+  const {data,error} =
+    await sb.rpc(
+      'get_payment_proposal_by_token',
+      {p_token:token}
+    );
+
+  if(error){
+    console.error(error);
+    showError('Não foi possível carregar a proposta.');
+    return;
+  }
+
+  if(!data || !data.proposal_id){
+    showError('Proposta não encontrada ou link expirado.');
+    return;
+  }
+
+  proposal = data;
+
+  document.getElementById('projectName').textContent =
+    data.project_name || 'Projeto';
+
+  document.getElementById('clientName').textContent =
+    data.company?.legal_name ||
+    'VINÍCOLA DOMÍNIO CANASTRA LTDA';
+
+  document.getElementById('totalValue').textContent =
+    money(data.total_value);
+
+  document.getElementById('summaryTotal').textContent =
+    money(data.total_value);
+
+  document.getElementById('adminMessage').textContent =
+    data.admin_message ||
+    'Valor negociado conforme alinhamento comercial.';
+
+  if(data.company){
+
+    document.getElementById('legalName').value =
+      data.company.legal_name || '';
+
+    document.getElementById('tradeName').value =
+      data.company.trade_name || '';
+
+    document.getElementById('cnpj').value =
+      data.company.cnpj || '';
+
+    document.getElementById('stateRegistration').value =
+      data.company.state_registration || '';
+
+    document.getElementById('address').value =
+      data.company.address || '';
+
+    document.getElementById('city').value =
+      data.company.city || '';
+
+    document.getElementById('state').value =
+      data.company.state || '';
+
+    document.getElementById('zip').value =
+      data.company.zip || '';
+
+    document.getElementById('email').value =
+      data.company.email || '';
+
+    document.getElementById('phone').value =
+      data.company.phone || '';
+  }
+
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('content').classList.remove('hidden');
+
+  const existingStages = data.stages || [];
+
+  if(existingStages.length >= 2){
+
+    existingStages.forEach(stage=>{
+      addStage(
+        stage.stage_name,
+        stage.amount,
+        stage.trigger_description
+      );
+    });
+
+  }else{
+
+    addStage('Entrada', '', '');
+    addStage('Etapa final', '', '');
+
+  }
+
+  updateTotals();
+}
+
+function addStage(name='',amount='',description=''){
+
+  const container =
+    document.getElementById('stages');
+
+  const number =
+    container.children.length + 1;
+
+  const div =
+    document.createElement('div');
+
+  div.className = 'stage';
+
+  div.innerHTML = `
+
+    <div class="stage-title">
+      Etapa ${number}
+    </div>
+
+    <div class="field">
+      <label>Nome da etapa *</label>
+      <input class="stageName"
+        value="${escapeHtml(name)}"
+        placeholder="Ex.: Entrada">
+    </div>
+
+    <div class="field">
+      <label>Valor (R$) *</label>
+      <input class="stageAmount"
+        type="number"
+        step="0.01"
+        min="0"
+        value="${amount || ''}"
+        placeholder="0,00">
+    </div>
+
+    <div class="field">
+      <label>Quando será paga?</label>
+      <input class="stageDescription"
+        value="${escapeHtml(description)}"
+        placeholder="Ex.: Na assinatura do contrato">
+    </div>
+
+    <div class="stage-actions">
+      <button type="button"
+        class="danger removeStage">
+        Remover
+      </button>
+    </div>
+  `;
+
+  div.querySelector('.removeStage')
+    .addEventListener('click',()=>{
+
+      if(container.children.length <= 2){
+        alert('A proposta precisa ter pelo menos 2 etapas.');
+        return;
+      }
+
+      div.remove();
+      renumberStages();
+      updateTotals();
+
+    });
+
+  div.querySelector('.stageAmount')
+    .addEventListener('input',updateTotals);
+
+  container.appendChild(div);
+}
+
+function escapeHtml(value){
+
+  return String(value || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+
+}
+
+function renumberStages(){
+
+  [...document.querySelectorAll('.stage')]
+    .forEach((stage,index)=>{
+
+      stage.querySelector('.stage-title')
+        .textContent = `Etapa ${index+1}`;
+
+    });
+
+}
+
+function updateTotals(){
+
+  const amounts =
+    [...document.querySelectorAll('.stageAmount')]
+      .map(input=>Number(input.value || 0));
+
+  const total =
+    amounts.reduce((a,b)=>a+b,0);
+
+  const target =
+    Number(proposal?.total_value || 0);
+
+  const difference =
+    total-target;
+
+  document.getElementById('enteredTotal')
+    .textContent = money(total);
+
+  const diff =
+    document.getElementById('difference');
+
+  if(Math.abs(difference) < 0.01){
+
+    diff.textContent =
+      '✓ O pagamento fecha exatamente o valor da proposta.';
+
+    diff.className = 'ok';
+
+  }else{
+
+    diff.textContent =
+      'Diferença: ' + money(difference);
+
+    diff.className = 'error';
+
+  }
+
+}
+
+document.getElementById('addStage')
+.addEventListener('click',()=>{
+
+  if(document.querySelectorAll('.stage').length >= 20){
+
+    alert('O máximo é de 20 etapas.');
+
+    return;
+  }
+
+  addStage();
+  updateTotals();
+
+});
+
+document.getElementById('proposalForm')
+.addEventListener('submit',async function(event){
+
+  event.preventDefault();
+
+  if(!proposal) return;
+
+  const stages =
+    [...document.querySelectorAll('.stage')]
+      .map(stage=>({
+
+        stage_name:
+          stage.querySelector('.stageName').value.trim(),
+
+        amount:
+          Number(stage.querySelector('.stageAmount').value || 0)
+            .toFixed(2),
+
+        trigger_description:
+          stage.querySelector('.stageDescription').value.trim()
+
+      }));
+
+  const total =
+    stages.reduce(
+      (sum,stage)=>sum+Number(stage.amount),
+      0
+    );
+
+  const target =
+    Number(proposal.total_value);
+
+  if(stages.length < 2){
+
+    alert('Informe pelo menos 2 etapas.');
+    return;
+
+  }
+
+  if(stages.some(stage=>
+    !stage.stage_name ||
+    Number(stage.amount)<=0
+  )){
+
+    alert('Preencha o nome e o valor de todas as etapas.');
+    return;
+
+  }
+
+  if(Math.abs(total-target) > 0.01){
+
+    alert(
+      'A soma das etapas precisa fechar exatamente ' +
+      money(target) +
+      '.'
+    );
+
+    return;
+
+  }
+
+  const btn =
+    document.getElementById('submitBtn');
+
+  btn.disabled=true;
+  btn.textContent='ENVIANDO...';
+
+  const company = {
+
+    p_token:token,
+
+    p_company_legal_name:
+      document.getElementById('legalName').value.trim(),
+
+    p_company_trade_name:
+      document.getElementById('tradeName').value.trim(),
+
+    p_company_cnpj:
+      document.getElementById('cnpj').value.trim(),
+
+    p_company_state_registration:
+      document.getElementById('stateRegistration').value.trim(),
+
+    p_company_address:
+      document.getElementById('address').value.trim(),
+
+    p_company_city:
+      document.getElementById('city').value.trim(),
+
+    p_company_state:
+      document.getElementById('state').value.trim(),
+
+    p_company_zip:
+      document.getElementById('zip').value.trim(),
+
+    p_company_email:
+      document.getElementById('email').value.trim(),
+
+    p_company_phone:
+      document.getElementById('phone').value.trim()
+
+  };
+
+  const companyResult =
+    await sb.rpc(
+      'submit_payment_proposal_company',
+      company
+    );
+
+  if(companyResult.error){
+
+    console.error(companyResult.error);
+
+    alert(
+      'Não foi possível salvar os dados da empresa: ' +
+      companyResult.error.message
+    );
+
+    btn.disabled=false;
+    btn.textContent='ENVIAR PROPOSTA DE PAGAMENTO';
+
+    return;
+  }
+
+  const stagesResult =
+    await sb.rpc(
+      'submit_payment_proposal_stages',
+      {
+        p_token:token,
+        p_stages:stages,
+        p_client_message:
+          document.getElementById('clientMessage').value.trim()
+      }
+    );
+
+  if(stagesResult.error){
+
+    console.error(stagesResult.error);
+
+    alert(
+      'Os dados da empresa foram salvos, mas houve um problema ao enviar as etapas: ' +
+      stagesResult.error.message
+    );
+
+    btn.disabled=false;
+    btn.textContent='ENVIAR PROPOSTA DE PAGAMENTO';
+
+    return;
+  }
+
+  document.getElementById('proposalForm').innerHTML = `
+
+    <div class="card">
+
+      <h2 class="ok">
+        ✓ Proposta enviada com sucesso
+      </h2>
+
+      <p>
+        Recebemos os dados da empresa e a composição
+        de pagamento proposta.
+      </p>
+
+      <p>
+        A Nomad Horse fará a conferência e dará
+        sequência à formalização do contrato.
+      </p>
+
+      <div class="total">
+        ${money(target)}
+      </div>
+
+      <p style="text-align:center;color:#aaa">
+        Você já pode fechar esta página.
+      </p>
+
+    </div>
+
+  `;
+
+});
+
+loadProposal();
+
+</script>
+
+</body>
+</html>
