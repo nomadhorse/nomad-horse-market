@@ -479,6 +479,20 @@ async function loadProposal(){
       data.company.phone || '';
   }
 
+    const representative =
+    Array.isArray(data.legal_representatives) &&
+    data.legal_representatives.length
+      ? data.legal_representatives[0]
+      : null;
+
+  if(representative){
+    document.getElementById('responsibleName').value =
+      representative.name || '';
+
+    document.getElementById('responsibleRole').value =
+      representative.role || '';
+  }
+
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
 
