@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Proposta — Nomad Horse Market</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
 body{
@@ -337,10 +335,52 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYmVremd4ZGZ1aGpsb2NpcGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MzY4MjQsImV4cCI6MjEwMzAxMjgyNH0.QMbeRKiKbh90DLsP7NqgwirPFSz4WggcqC9xSl4GsMY';
 
-const sb = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+let sb;
+
+function loadSupabaseLibrary(url){
+  return new Promise((resolve,reject)=>{
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = ()=>{
+      if(window.supabase?.createClient){
+        resolve();
+      }else{
+        reject(new Error('A biblioteca do Supabase não foi inicializada.'));
+      }
+    };
+    script.onerror = ()=>reject(new Error('Falha ao carregar a biblioteca do Supabase.'));
+    document.head.appendChild(script);
+  });
+}
+
+async function initializeSupabase(){
+  if(!window.supabase?.createClient){
+    const cdns = [
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+      'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'
+    ];
+    let loaded = false;
+
+    for(const url of cdns){
+      try{
+        await loadSupabaseLibrary(url);
+        loaded = true;
+        break;
+      }catch(error){
+        console.error(error);
+      }
+    }
+
+    if(!loaded){
+      throw new Error('Não foi possível carregar a biblioteca do Supabase. Verifique sua conexão e tente novamente.');
+    }
+  }
+
+  sb = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+}
 
 const token =
   new URLSearchParams(window.location.search).get('proposal');
@@ -903,7 +943,12 @@ document.getElementById('proposalForm')
 
 });
 
-loadProposal();
+initializeSupabase()
+  .then(loadProposal)
+  .catch(error=>{
+    console.error(error);
+    showError('Não foi possível carregar o serviço da proposta. Verifique sua conexão e tente novamente.');
+  });
 
 </script>
 
